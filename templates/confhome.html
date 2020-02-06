@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2> Welcome to the configure section of MCMS, Below are links to the tools offered here</h2>
+<form action="Tools" method="post">
+{% csrf_token %}
+<button type="submit" class="btn btn-primary btn-lg btn-block">Tools</button>
+</form>
+
+<form action="Tools" method="post">
+{% csrf_token %}
+<button type="button" class="btn btn-primary btn-lg btn-block">Bulk Change Tool</button>
+</form>
+
+<form action="Tools" method="post">
+{% csrf_token %}
+<button type="button" class="btn btn-danger btn-lg btn-block">Log Out</button>
+</form>
+{% endblock %}
