@@ -1,10 +1,66 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Backend Testing Tools</h1>
+<h1>Bulk Config Change</h1>
   <h2>Org List</h2>
   <form method="get">
     <input type="text" name="apikey" placeholder="API key here">
     <button type="submit">GetOrgList</button>
   </form>
-  <p> {{org}} </p>
+  <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">ID</th>
+    </tr>
+  </thead>
+  <tbody>
+  {%for orgname, orgid in table%}
+  <tr>
+  <td>{{orgname}}</td>
+  <td>{{orgid}}</td>  
+  </tr>
+  {%endfor%}
+  </tbody>
+  </table>
+  
+ {% if messages %}
+        {% for message in messages %}
+            <div>
+                <strong>{{message|safe}}</strong>
+            </div>
+        {% endfor %}
+    {% else %}
+    {{order}}
+    <form action="" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="file1"> Upload a file</label>
+        <input type="file" id="file1" name="csvfile">
+        <small>Only accepts CSV files</small>
+        <button type="submit">Upload</button>
+    </form>
+    {% endif %}
+    {% for profile in profiles %}
+    {{profile.name}}
+    {% endfor %}
+    <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Serial</th>
+      <th scope="col">Network Name</th>
+	  <th scope="col">Name</th>
+	  <th scope="col">Tags</th>
+	  <th scope="col">Notes</th>
+	  <th scope="col">Address</th>
+	  <th scope="col">IP</th>
+	  <th scope="col">GW</th>
+	  <th scope="col">Mask</th>
+	  <th scope="col">DNS1</th>
+	  <th scope="col">DNS2</th>
+	  <th scope="col">VLAN</th>
+	  <th scope="col">Net Tags</th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+  </table>
 {% endblock %}

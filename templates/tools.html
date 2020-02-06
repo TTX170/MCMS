@@ -11,17 +11,46 @@
     <tr>
       <th scope="col">Name</th>
       <th scope="col">ID</th>
+	  <th scope="col">Type</th>
     </tr>
   </thead>
   <tbody>
-  {%for orgname, orgid in table%}
+  {%for netname, netid in orgtable%}
   <tr>
-  <td>{{orgname}}</td>
-  <td>{{orgid}}</td>  
+  <td>{{netname}}</td>
+  <td>{{netid}}</td> 
+  <td>{{nettype}}</td>
   </tr>
   {%endfor%}
   </tbody>
   </table>  
+  <h2>Get Network List</h2>
+  <form method="get">
+    <input type="text" name="NetList" placeholder="API key here">
+	<input type="text" name="orgid" placeholder="Org ID here">
+	<input type="text" name="search" placeholder="Network Name Search (Optional)">
+	<!-<input type="text" name="networkID" placeholder="networkID here">
+    <button type="submit">GetNetworkList</button>
+  </form>
+  <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">ID</th>
+	  <th scope="col">Type</th>
+    </tr>
+  </thead>
+  <tbody>
+  {%for netname, netid,nettype in nettable%}
+  <tr>
+  <td>{{netname}}</td>
+  <td>{{netid}}</td> 
+  <td>{{nettype}}</td>
+  </tr>
+  {%endfor%}
+  </tbody>
+  </table>
+  <p>{{result}}<p>
   
   <h2>Check Active Batches</h2>
   <form method="get">

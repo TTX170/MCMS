@@ -130,3 +130,5 @@ STATIC_URL = '/static/'
 LOGIN_REDIRECT_URL = '/configure/'
 LOGOUT_REDIRECT_URL = '/'
 AUTH_USER_MODEL = 'users.MerakiUser'
+MEDIA_URL = '/files/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'files')
