@@ -42,25 +42,44 @@
     {% for profile in profiles %}
     {{profile.name}}
     {% endfor %}
-    <table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Serial</th>
-      <th scope="col">Network Name</th>
-	  <th scope="col">Name</th>
-	  <th scope="col">Tags</th>
-	  <th scope="col">Notes</th>
-	  <th scope="col">Address</th>
-	  <th scope="col">IP</th>
-	  <th scope="col">GW</th>
-	  <th scope="col">Mask</th>
-	  <th scope="col">DNS1</th>
-	  <th scope="col">DNS2</th>
-	  <th scope="col">VLAN</th>
-	  <th scope="col">Net Tags</th>
-    </tr>
-  </thead>
-  <tbody>
-  </tbody>
-  </table>
+  <div class="table-responsive">
+	  <table class="table">
+		  <thead>
+			<tr>
+			  <th scope="col">Serial</th>
+			  <th scope="col">Network Name</th>
+			  <th scope="col">Name</th>
+			  <th scope="col">Tags</th>
+			  <th scope="col">Notes</th>
+			  <th scope="col">Address</th>
+			  <th scope="col">IP</th>
+			  <th scope="col">GW</th>
+			  <th scope="col">Mask</th>
+			  <th scope="col">DNS1</th>
+			  <th scope="col">DNS2</th>
+			  <th scope="col">VLAN</th>
+			  <th scope="col">Net Tags</th>
+			</tr>
+		  </thead>
+		  <tbody>
+			  {% for i in pull%}
+			  <tr>
+				  <td>{{i.serial}}</td>
+				  <td>{{i.networkname}}</td>
+				  <td>{{i.name}}</td>
+				  <td>{{i.tags}}</td>
+				  <td>{{i.notes}}</td>
+				  <td>{{i.address}}</td>
+				  <td>{{i.ip}}</td>
+				  <td>{{i.gw}}</td>
+				  <td>{{i.mask}}</td>
+				  <td>{{i.dns1}}</td>
+				  <td>{{i.dns2}}</td>
+				  <td>{{i.vlan}}</td>
+				  <td>{{i.nettags}}</td>
+			  </tr>
+			  {% endfor %}
+		  </tbody>
+	  </table>
+  </div>
 {% endblock %}

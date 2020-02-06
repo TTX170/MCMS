@@ -90,7 +90,7 @@ def home(request):
  
 def bulkchange(request):
     if request.user.is_authenticated:
-            bebe = request.user.id            
+            PullTest = bulk.objects.filter(owner=request.user.id)                      
             my_orgs = ''
             GetOrgList = ''
             table=[]
@@ -110,7 +110,7 @@ def bulkchange(request):
                         org_id.append(org["id"])
                         org_name.append(org["name"])
                     table = zip(org_name,org_id)    
-                return render(request, 'bulkchange.html', {'table':table})
+                return render(request, 'bulkchange.html', {'table':table,'pull':PullTest})
             data = bulk.objects.all()
             prompt = {
                 'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.',
@@ -143,6 +143,6 @@ def bulkchange(request):
                     )                
                 context = {}
                 return render(request,'bulkchange.html', context)
-            return render(request, 'bulkchange.html', prompt) 
+            return render(request, 'bulkchange.html', prompt,{'pull':PullTest}) 
     else:
         return redirect('/')
