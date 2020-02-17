@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 meraki_api__log*
+*.xlsx
 
 # C extensions
 *.so

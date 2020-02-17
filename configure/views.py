@@ -94,6 +94,8 @@ def bulkchange(request):
             my_orgs = ''
             GetOrgList = ''
             table=[]
+            SearchList=[]
+            NetID=0
             if 'apikey' in request.GET: 
                 api_key = request.GET['apikey']
                 if not api_key == '':
@@ -106,11 +108,26 @@ def bulkchange(request):
                     my_orgs = dashboard.organizations.getOrganizations()
                     org_id = []
                     org_name = []
+                    net_name = []
+                    net_id = []
                     for org in my_orgs:
                         org_id.append(org["id"])
                         org_name.append(org["name"])
-                    table = zip(org_name,org_id)    
-                return render(request, 'bulkchange.html', {'table':table,'pull':PullTest})
+                    table = zip(org_name,org_id)                       
+                if 'orgID' in request.GET:
+                    orgID = request.GET['orgID']
+                    my_nets = dashboard.networks.getOrganizationNetworks(orgID)
+                    for net in my_nets:
+                        net_id.append(net["id"])
+                        net_name.append(net["name"])                     
+                    for i in PullTest:
+                        if i.networkname in net_name:
+                            NetID = net_name.index(i.networkname)
+                            SearchList.append(net_id[NetID])
+                        else:
+                            SearchList.append('?')                          
+                    
+                return render(request, 'bulkchange.html', {'table':table,'pull':PullTest,'search':SearchList})
             data = bulk.objects.all()
             prompt = {
                 'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.',
@@ -140,9 +157,42 @@ def bulkchange(request):
                         vlan = column[11],
                         nettags = column[12],
                         owner = request.user,
-                    )                
+                    ) 
+                       
                 context = {}
                 return render(request,'bulkchange.html', context)
-            return render(request, 'bulkchange.html', prompt,{'pull':PullTest}) 
+            if 'validate' in request.GET:
+                changes = bulk.objects.filter(owner=request.user.id)
+                api_key = request.GET['apikey']
+                orgID = request.GET['orgID']                
+                if not (apikey=='' and orgID==''):
+                    dashboard = meraki.DashboardAPI(
+                    api_key = api_key,
+                    base_url='https://api-mp.meraki.com/api/v0/',
+                    log_file_prefix=os.path.basename(__file__)[:-3],
+                    print_console=False
+                    )
+                    my_orgs = dashboard.organizations.getOrganizations()
+                    org_id = []
+                    org_name = []
+                    net_name = []
+                    net_id = []
+                    for org in my_orgs:
+                        org_id.append(org["id"])
+                        org_name.append(org["name"])
+                    my_nets = dashboard.networks.getOrganizationNetworks(orgID)
+                    for net in my_nets:
+                        net_id.append(net["id"])
+                        net_name.append(net["name"])                     
+                    for i in PullTest:
+                        if i.networkname in net_name:
+                            NetID = net_name.index(i.networkname)
+                            SearchList.append(net_id[NetID])
+                        else:
+                            SearchList.append('?') 
+                return render(request, 'bulkchange.html', {'changes':PullTest,'search':SearchList})
+                    
+                
+            return render(request, 'bulkchange.html', prompt,{'pull':PullTest})      
     else:
         return redirect('/')
