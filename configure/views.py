@@ -144,12 +144,14 @@ def bulkchange(request):
                        
                 context = {}
                 return render(request,'bulkchange.html', context)
-            if 'validate' in request.GET:
+            if ('preview' in request.GET) or ('validate' in request.GET):
                 changes = bulk.objects.filter(owner=request.user.id)
                 api_key = request.GET['apikey']
                 orgID = request.GET['orgID']
                 NetID=0      
                 SearchList=[]
+                actions=[]
+                
                 if not (api_key=='' and orgID==''):
                     dashboard = meraki.DashboardAPI(
                     api_key = api_key,
@@ -162,6 +164,7 @@ def bulkchange(request):
                     org_name = []
                     net_name = []
                     net_id = []
+                    new_net_id=[]
                     for org in my_orgs:
                         org_id.append(org["id"])
                         org_name.append(org["name"])
@@ -174,7 +177,32 @@ def bulkchange(request):
                             NetID = net_name.index(i.networkname)
                             SearchList.append(net_id[NetID])
                         else:
-                            SearchList.append('?') 
+                            if 'validate' in request.GET:
+                                SearchList.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
+                            else:
+                                SearchList.append("Needs Creation")
+                    devname = ''
+                    devserial = ''
+                    devnetworkID=''
+                   
+                    my_nets = dashboard.networks.getOrganizationNetworks(orgID)  #called again to refresh the list with new networks                      
+                    for net in my_nets:
+                        net_id.append(net["id"])
+                        net_name.append(net["name"]) 
+                    if 'validate' in request.GET:
+                        orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
+                        for device in orgdevices:
+                            orgdevserials.append(device["serial"])
+                            orgdevnetwork.sppend(device["networkID"])
+                        #for device in 
+                        
+                        for i in changes:
+                            devname = i.name
+                            devserial = i.serial
+                            NetID = net_name.index(i.networkname)
+                            devnetworkID = net_id[NetID]
+                        #actions.append("dashboard.devices.updateNetworkDevice(devsnetworkID
+                            
                 return render(request, 'bulkchange.html', {'pull':changes,'search':SearchList})
                     
                 
