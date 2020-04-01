@@ -92,7 +92,9 @@ def bulkchange(request):
     if request.user.is_authenticated:              
             my_orgs = ''
             GetOrgList = ''
-            table=[]          
+            table=[]      
+            invalidreq=[]
+            netcorrect = []
             if 'getorg' in request.GET: 
                 api_key = request.GET['apikey']
                 if not api_key == '':
@@ -184,7 +186,11 @@ def bulkchange(request):
                     devname = ''
                     devserial = ''
                     devnetworkID=''
-                   
+                    orgdevserials=[]
+                    orgdevnetwork=[]
+                    net_serial=[]
+                    invalidreq=[]
+                    netcorrect = []
                     my_nets = dashboard.networks.getOrganizationNetworks(orgID)  #called again to refresh the list with new networks                      
                     for net in my_nets:
                         net_id.append(net["id"])
@@ -193,17 +199,41 @@ def bulkchange(request):
                         orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
                         for device in orgdevices:
                             orgdevserials.append(device["serial"])
-                            orgdevnetwork.sppend(device["networkID"])
-                        #for device in 
+                            orgdevnetwork.append(device["networkId"])
+                        net_serial = dict(zip(orgdevserials,orgdevnetwork))
                         
                         for i in changes:
                             devname = i.name
                             devserial = i.serial
+                            
+                            invalidreq.append("beep")
+                            if not i.serial in orgdevserials:
+                                invalidreq.append("%s is not known in this organisation" % devserial)
+                                continue
+                                
                             NetID = net_name.index(i.networkname)
-                            devnetworkID = net_id[NetID]
+                            destID = net_id[NetID]
+                            #currentnetworkID = (x.orgdevnetwork for x, x in net_serial if x.orgdevnetwork == devserial)
+                            currentnetworkID = net_serial[devserial]
+                            netcorrect.append(currentnetworkID)
+                            if currentnetworkID == destID:
+                                netcorrect.append("True")
+                                continue # all is fine
+                            elif currentnetworkID == None:
+                                netcorrect.append("blank")
+                                #call to add device to network
+                            else: 
+                                netcorrect.append("wrong")
+                                #call to remove device from current network
+                                #call to add device to new network
+                                
+                                
+                                
+                            
+                         
                         #actions.append("dashboard.devices.updateNetworkDevice(devsnetworkID
                             
-                return render(request, 'bulkchange.html', {'pull':changes,'search':SearchList})
+                return render(request, 'bulkchange.html', {'pull':changes,'search':SearchList,'netcr':netcorrect,'invalid':invalidreq})
                     
                 
             return render(request, 'bulkchange.html', prompt)      
