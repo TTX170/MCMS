@@ -1,3 +1,2 @@
 Serial,Network name,Name,Tags,Notes,Address,Static IP,Gateway,Netmask,DNS1,DNS2,VLAN,Network tags
-Q2HP-FSBP-AWZR,Testing,Beep,rainbow,Oval office,1600 Pennsylvania,5.5.5.1,5.5.5.254,255.255.255.0,5.5.5.253,5.5.5.252,1,west tag1
-Q2PD-WTDG-BGYB,Elland House,Boop,rainbow,Situation room,1600 Pennsylvania,5.5.5.2,5.5.5.254,255.255.255.0,5.5.5.253,5.5.5.252,1,west tag1
+Q2HP-FSBP-AWZR,BeepBeep,Beep,Beep,Beep,26 Ousemere Close NG340HY,,192.168.1.1,255.255.255.0,1.1.1.1,8.8.8.8,68,Yes

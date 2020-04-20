@@ -167,6 +167,7 @@ def bulkchange(request):
                     net_name = []
                     net_id = []
                     new_net_id=[]
+                    netcreation=[]
                     for org in my_orgs:
                         org_id.append(org["id"])
                         org_name.append(org["name"])
@@ -180,7 +181,8 @@ def bulkchange(request):
                             SearchList.append(net_id[NetID])
                         else:
                             if 'validate' in request.GET:
-                                SearchList.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
+                                SearchList.append("Will be created")
+                                netcreation.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
                             else:
                                 SearchList.append("Needs Creation")
                     devname = ''
@@ -191,6 +193,7 @@ def bulkchange(request):
                     net_serial=[]
                     invalidreq=[]
                     netcorrect = []
+                    networkactions = []
                     my_nets = dashboard.networks.getOrganizationNetworks(orgID)  #called again to refresh the list with new networks                      
                     for net in my_nets:
                         net_id.append(net["id"])
@@ -203,8 +206,21 @@ def bulkchange(request):
                         net_serial = dict(zip(orgdevserials,orgdevnetwork))
                         
                         for i in changes:
+                            # orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
+                            # for device in orgdevices:
+                                # orgdevserials.append(device["serial"])
+                                # orgdevnetwork.append(device["networkId"])
+                            # net_serial = dict(zip(orgdevserials,orgdevnetwork))
                             devname = i.name
                             devserial = i.serial
+                            devtags = i.tags
+                            devnotes = i.notes
+                            devaddress = i.address
+                            devip = i.ip
+                            devgw = i.gw
+                            devmask = i.mask
+                            devdns = [i.dns1, i.dns2]
+                            devvlan = i.vlan
                             
                             invalidreq.append("beep")
                             if not i.serial in orgdevserials:
@@ -213,25 +229,37 @@ def bulkchange(request):
                                 
                             NetID = net_name.index(i.networkname)
                             destID = net_id[NetID]
-                            #currentnetworkID = (x.orgdevnetwork for x, x in net_serial if x.orgdevnetwork == devserial)
+                          
                             currentnetworkID = net_serial[devserial]
                             netcorrect.append(currentnetworkID)
                             if currentnetworkID == destID:
                                 netcorrect.append("True")
-                                continue # all is fine
+                                #continue # all is fine
                             elif currentnetworkID == None:
                                 netcorrect.append("blank")
-                                #call to add device to network
+                                #addactions.append("dashboard.devices.claimNetworkDevices(destID, devserial)")
+                                dashboard.devices.claimNetworkDevices(destID, serial = devserial)
                             else: 
                                 netcorrect.append("wrong")
-                                #call to remove device from current network
-                                #call to add device to new network
+                                dashboard.devices.removeNetworkDevice(currentnetworkID, devserial)
+                                dashboard.devices.claimNetworkDevices(destID, serial = devserial)
+                            if devip == '' and devvlan == '':
+                                continue
+                            elif devip == "0.0.0.0":
+                                wan1 = {"wanEnabled" : "not configured", "usingstaticip" : False}
+                            elif devip == '':
+                                wan1 = {"wanEnabled" : "not configured", "usingstaticip" : False, "vlan" : devvlan}
+                            else :
+                                wan1 = {"wanEnabled" : "not configured", "usingstaticip" : True, "staticIp" : devip, "staticGatewayIp" : devgw, "staticSubnetMask" : devmask, "staticDns" : devdns, "vlan" : devvlan}
                                 
-                                
-                                
+                            dashboard.management_interface_settings.updateNetworkDeviceManagementInterfaceSettings(destID, devserial,wan1 = wan1)
+                            dashboard.devices.updateNetworkDevice(destID, devserial, name = devname, tags = devtags, notes = devnotes)
                             
-                         
-                        #actions.append("dashboard.devices.updateNetworkDevice(devsnetworkID
+                            
+                            #revert
+                            #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/management-interface-settings/get-network-device-management-interface-settings
+                            #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/devices/get-network-device
+                            #https://pypi.org/project/django-encrypted-model-fields/
                             
                 return render(request, 'bulkchange.html', {'pull':changes,'search':SearchList,'netcr':netcorrect,'invalid':invalidreq})
                     
