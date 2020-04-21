@@ -115,12 +115,13 @@ def bulkchange(request):
                 return render(request, 'bulkchange.html',{'table':table})
             data = bulk.objects.all()
             prompt = {
-                'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.',
+                'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.Please note your submission id is auto generated from the csv name',
                 'profiles': data
                 }
                            
             if 'csvfile' in request.FILES:
                 csv_file = request.FILES['csvfile']
+                importname = os.path.splitext(csv_file)[0]
                 if not csv_file.name.endswith('.csv'):
                     messages.error(request, 'THIS IS NOT A CSV FILE')
                 data_set = csv_file.read().decode('UTF-8')
@@ -142,11 +143,13 @@ def bulkchange(request):
                         vlan = column[11],
                         nettags = column[12],
                         owner = request.user,
+                        revert = false,
+                        submissionID = importname,
                     ) 
                        
                 context = {}
                 return render(request,'bulkchange.html', context)
-            if ('preview' in request.GET) or ('validate' in request.GET):
+            if ('preview' in request.GET) or ('validate' in request.GET) or ('genrevert' in request.GET):
                 changes = bulk.objects.filter(owner=request.user.id)
                 api_key = request.GET['apikey']
                 orgID = request.GET['orgID']
@@ -177,7 +180,7 @@ def bulkchange(request):
                         net_name.append(net["name"])                     
                     for i in changes:
                         if i.networkname in net_name:
-                            NetID = net_name.index(i.networkname)
+                            NetID = net_name.index(i.networkname) 
                             SearchList.append(net_id[NetID])
                         else:
                             if 'validate' in request.GET:
@@ -222,7 +225,7 @@ def bulkchange(request):
                             devdns = [i.dns1, i.dns2]
                             devvlan = i.vlan
                             
-                            invalidreq.append("beep")
+                            
                             if not i.serial in orgdevserials:
                                 invalidreq.append("%s is not known in this organisation" % devserial)
                                 continue
@@ -245,7 +248,7 @@ def bulkchange(request):
                                 dashboard.devices.claimNetworkDevices(destID, serial = devserial)
                             if devip == '' and devvlan == '':
                                 continue
-                            elif devip == "0.0.0.0":
+                            elif devip == "del":
                                 wan1 = {"wanEnabled" : "not configured", "usingstaticip" : False}
                             elif devip == '':
                                 wan1 = {"wanEnabled" : "not configured", "usingstaticip" : False, "vlan" : devvlan}
@@ -255,7 +258,63 @@ def bulkchange(request):
                             dashboard.management_interface_settings.updateNetworkDeviceManagementInterfaceSettings(destID, devserial,wan1 = wan1)
                             dashboard.devices.updateNetworkDevice(destID, devserial, name = devname, tags = devtags, notes = devnotes)
                             
-                            
+                    if 'genrevert' in request.GET:
+                        revertID = request.GET["revertname"]
+                        orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
+                        for device in orgdevices:
+                            orgdevserials.append(device["serial"])
+                            orgdevnetwork.append(device["networkId"])
+                           
+                        net_serial = dict(zip(orgdevserials,orgdevnetwork))
+                       
+                        for i in changes :
+                            devserial = i.serial
+                            currentnetworkID = net_serial[devserial]
+                            revertmanagement = (dashboard.management_interface_settings.getNetworkDeviceManagementInterfaceSettings(currentnetworkID, devserial)["wan1"])
+                            revertproperties = dashboard.devices.getNetworkDevice(currentnetworkID, devserial)
+                            networksets = dashboard.networks.getNetwork(currentnetworkID)
+                            if "name" in revertproperties : revname = revertproperties["name"] 
+                            else :revname = None
+                            if "tags" in revertproperties : revtags = revertproperties["tags"] 
+                            else :revtags = None
+                            if "notes" in revertproperties : revname = revertproperties["notes"] 
+                            else :revnotes = None
+                            if "address" in revertproperties : revaddr = revertproperties["address"] 
+                            else :revaddr = None
+                            if "staticIp" in revertmanagement : 
+                                revip = revertmanagement["staticIp"]
+                                revgw = revertmanagement["staticGatewayIp"]
+                                revmask = revertmanagement["staticSubnetMask"]
+                                revdns1 = revertmanagement["staticDns"][0]
+                                revdns2 = revertmanagement["staticDns"][1]
+                            else :
+                                revip = None
+                                revgw = None
+                                revmask = None
+                                revdns1 = None
+                                revdns2 = None
+                            if "vlan" in revertmanagement : revvlan = revertmanagement["vlan"]
+                            else : revvlan = None
+                            if "tags" in networksets : revnettags = networksets["tags"]
+                            else :revnettags = None                                
+                            bulk.objects.update_or_create(
+                                serial = devserial,
+                                networkname = networksets["name"],
+                                name = revname,
+                                tags = revtags,
+                                notes = revnotes,
+                                address = revaddr,
+                                ip = revip,
+                                gw = revgw,
+                                mask = revmask,
+                                dns1 = revdns1,
+                                dns2 = revdns2,
+                                vlan = revvlan,
+                                nettags = revnettags,
+                                owner = request.user,
+                                revert = True,
+                                submissionID = revertID 
+                            )
                             #revert
                             #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/management-interface-settings/get-network-device-management-interface-settings
                             #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/devices/get-network-device

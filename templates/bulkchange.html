@@ -84,12 +84,15 @@
 	  </table>  
   </div>
    <form method="get">
-   <input type="text" name="apikey" placeholder="API key here">
+   <input type="text" name="apikey" placeholder="API key Here">
 	<input type="text" name="orgID" placeholder="OrgID Here">
+	<input type="text" name="revertname" placeholder="Name of Backup Here">
 	<button type="submit" name="preview" class="btn btn-primary">Preview Changes</button>
 	<button type="submit" name="validate" class="btn btn-primary">Validate Changes</button>
-	<button type="submit" name="Submit" class="btn btn-danger">Commit Changes</button>	
+	<button type="submit" name="Commit" class="btn btn-danger">Commit Changes</button>
+	<button type="submit" name="genrevert" class="btn btn-danger">BackupDevices</button>
   </form>
+  
   <p>{{ netcr }}</p>
   <p>{{ invalid }}</p>
 
