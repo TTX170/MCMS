@@ -5,7 +5,7 @@
   <form method="get">
     <input type="text" name="apikey" placeholder="API key here">
 	<input type="text" name="orgID" placeholder="OrgID Here">
-    <button type="submit" name="getorg">GetOrgList</button>
+	<button type="submit" name="getorg">GetOrgList</button>
   </form>
   <table class="table">
   <thead>
@@ -19,6 +19,22 @@
   <tr>
   <td>{{orgname}}</td>
   <td>{{orgid}}</td>  
+  </tr>
+  {%endfor%}
+  </tbody>
+  </table>
+  <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">ID</th>
+    </tr>
+  </thead>
+  <tbody>
+  {%for bname, bid in substable%}
+  <tr>
+  <td>{{bname}}</td>
+  <td>{{bid}}</td>  
   </tr>
   {%endfor%}
   </tbody>

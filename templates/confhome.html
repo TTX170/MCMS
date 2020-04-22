@@ -10,6 +10,10 @@
 {% csrf_token %}
 <button type="submit" class="btn btn-primary btn-lg btn-block">Bulk Change Tool</button>
 </form>
+<form action="Backup" method="post">
+{% csrf_token %}
+<button type="submit" class="btn btn-primary btn-lg btn-block">Backup</button>
+</form>
 
 <form action="Tools" method="post">
 {% csrf_token %}

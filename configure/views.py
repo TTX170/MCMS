@@ -1,7 +1,10 @@
 from django.shortcuts import render, redirect
 import meraki, os, io, csv
 from django.contrib import messages
-from .models import bulk
+from .models import bulk, subtable
+import uuid
+import datetime
+from django.utils import timezone
 # Create your views here.
 
 from django.http import HttpResponse
@@ -111,8 +114,17 @@ def bulkchange(request):
                         org_id.append(org["id"])
                         org_name.append(org["name"])
                     table = zip(org_name,org_id)                 
-                    
-                return render(request, 'bulkchange.html',{'table':table})
+                    subs = subtable.objects.filter(owner = request.user.id, subtype = "addDev")
+                    bulk_id=[]
+                    bulk_name=[]
+                    for i in subs:
+                        bulk_id.append(i.id)
+                        if i.subtype == "addDev":
+                            bulk_name.append("%s-Import-%s"%(i.submissionFname,i.date))
+                        else:
+                            bulk_name.append("%s-Backup-%s"%(i.submissionFname,i.date))
+                    substable = zip(bulk_name,bulk_id)  
+                return render(request, 'bulkchange.html',{'table':table,'substable':substable})
             data = bulk.objects.all()
             prompt = {
                 'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.Please note your submission id is auto generated from the csv name',
@@ -121,7 +133,17 @@ def bulkchange(request):
                            
             if 'csvfile' in request.FILES:
                 csv_file = request.FILES['csvfile']
-                importname = os.path.splitext(csv_file)[0]
+                importname = os.path.splitext(csv_file.name)[0]
+                subid = uuid.uuid4()
+                subtable.objects.update_or_create( 
+                    id = subid,
+                    owner = request.user,
+                    subtype = "addDev",
+                    submissionFname = importname,
+                    date = timezone.now()
+                )
+                        
+                
                 if not csv_file.name.endswith('.csv'):
                     messages.error(request, 'THIS IS NOT A CSV FILE')
                 data_set = csv_file.read().decode('UTF-8')
@@ -142,15 +164,13 @@ def bulkchange(request):
                         dns2 = column[10],
                         vlan = column[11],
                         nettags = column[12],
-                        owner = request.user,
-                        revert = false,
-                        submissionID = importname,
+                        submissionID = (subtable.objects.get(id=subid)),
                     ) 
                        
                 context = {}
                 return render(request,'bulkchange.html', context)
             if ('preview' in request.GET) or ('validate' in request.GET) or ('genrevert' in request.GET):
-                changes = bulk.objects.filter(owner=request.user.id)
+                changes = bulk.objects.filter(submissionID="03609c5c-278f-44d0-91a0-40c331d95a92")
                 api_key = request.GET['apikey']
                 orgID = request.GET['orgID']
                 NetID=0      
@@ -207,7 +227,7 @@ def bulkchange(request):
                             orgdevserials.append(device["serial"])
                             orgdevnetwork.append(device["networkId"])
                         net_serial = dict(zip(orgdevserials,orgdevnetwork))
-                        
+                     
                         for i in changes:
                             # orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
                             # for device in orgdevices:
@@ -266,6 +286,14 @@ def bulkchange(request):
                             orgdevnetwork.append(device["networkId"])
                            
                         net_serial = dict(zip(orgdevserials,orgdevnetwork))
+                        subid = uuid.uuid4()
+                        subtable.objects.update_or_create( 
+                            id = subid,
+                            owner = request.user,
+                            subtype = "backupDev",
+                            submissionFname = revertID,
+                            date = timezone.now()
+                        )
                        
                         for i in changes :
                             devserial = i.serial
@@ -311,18 +339,40 @@ def bulkchange(request):
                                 dns2 = revdns2,
                                 vlan = revvlan,
                                 nettags = revnettags,
-                                owner = request.user,
-                                revert = True,
-                                submissionID = revertID 
+                                submissionID = (subtable.objects.get(id=subid))  
                             )
-                            #revert
-                            #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/management-interface-settings/get-network-device-management-interface-settings
-                            #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/devices/get-network-device
+                            
                             #https://pypi.org/project/django-encrypted-model-fields/
                             
                 return render(request, 'bulkchange.html', {'pull':changes,'search':SearchList,'netcr':netcorrect,'invalid':invalidreq})
-                    
+
+
                 
             return render(request, 'bulkchange.html', prompt)      
+    else:
+        return redirect('/')
+def backup(request):
+    if request.user.is_authenticated:  
+    #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/ssids/get-network-ssids
+    #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/switch-ports/get-device-switch-ports
+    #Big plan 
+    #Get the networks and devices (will just bundle this in the bulk tool)
+    #get the ssid's: probably not worth as can't configure radius and you should really be using templates for this.
+    #get the vlans
+    #get the get the per port vlan settings on the mx's
+    #get the switchports
+    #switchport model: Serial,number, name, enabled, poe, vlan, voice vlan, type, rstp, stp
+    #ssid model: Netname, number, enabled, authmode, canx
+    #vlan model: netname, vlan, vlanname, mxip, subnet, dhcpstatus, dhcprelayservers,
+    #mxports: netname, enabled, type, dropuntag, vlan
+        print("test")
+    
+    
+    
+    
+    
+    
+    
+    
     else:
         return redirect('/')
