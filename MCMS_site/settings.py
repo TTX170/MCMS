@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'users.apps.UsersConfig',
+    #'users.apps.UsersConfig',
     'encrypted_model_fields',
 ]
 
@@ -130,7 +130,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 LOGIN_REDIRECT_URL = '/configure/'
 LOGOUT_REDIRECT_URL = '/'
-AUTH_USER_MODEL = 'users.MerakiUser'
+AUTH_USER_MODEL = 'auth.user'
 MEDIA_URL = '/files/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'files')
 FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY')

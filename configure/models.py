@@ -1,6 +1,7 @@
 from django.db import models
-from users.models import MerakiUser
+#from users.models import MerakiUser
 from django.utils import timezone
+from django.contrib.auth.models import User
 import uuid
 import datetime
 # Create your models here.
@@ -74,6 +75,6 @@ class subtable(models.Model):
             ("mxPort", "mxPort")
         )
     )
-    owner = models.ForeignKey(MerakiUser, on_delete=models.CASCADE, related_name="requests")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="requests")
         
 
