@@ -24,21 +24,7 @@
   </tbody>
   </table>
   <table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Name</th>
-      <th scope="col">ID</th>
-    </tr>
-  </thead>
-  <tbody>
-  {%for bname, bid in substable%}
-  <tr>
-  <td>{{bname}}</td>
-  <td>{{bid}}</td>  
-  </tr>
-  {%endfor%}
-  </tbody>
-  </table>
+
   <p>{{search}}</p>                                                                        
  {% if messages %}
         {% for message in messages %}
@@ -99,7 +85,14 @@
 		  </tbody>
 	  </table>  
   </div>
-   <form method="get">
+  <p>Please Select the import you would like to load</p>
+  <form method="get">
+    <select class="form-control" name="sendid">
+	<option>-----</option>
+	{%for i,j in bulk_name.items%}
+	<option value={{j}}>{{i}}</option>
+	{%endfor%}
+  </select>
    <input type="text" name="apikey" placeholder="API key Here">
 	<input type="text" name="orgID" placeholder="OrgID Here">
 	<input type="text" name="revertname" placeholder="Name of Backup Here">
