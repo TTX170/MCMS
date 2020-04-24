@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 import meraki, os, io, csv
 from django.contrib import messages
-from .models import bulk, subtable
+from .models import bulk, subtable, userprofile
 from django.db.models import Q
 import uuid
 import datetime
@@ -109,23 +109,23 @@ def bulkchange(request):
             else:
                 bulk_name.append("%s-Backup-%s"%(i.submissionFname,i.date))
         substable = dict(zip(bulk_name,bulk_id))
-        if 'getorg' in request.GET: 
-            api_key = request.GET['apikey']
-            if not api_key == '':
-                dashboard = meraki.DashboardAPI(
-                api_key = api_key,
-                base_url='https://api-mp.meraki.com/api/v0/',
-                log_file_prefix=os.path.basename(__file__)[:-3],
-                print_console=False
-                )
-                my_orgs = dashboard.organizations.getOrganizations()
-                org_id = []
-                org_name = []
-                for org in my_orgs:
-                    org_id.append(org["id"])
-                    org_name.append(org["name"])
-                table = zip(org_name,org_id)                  
-            return render(request, 'bulkchange.html',{'table':table,'bulk_name':bulk_name})
+         
+        apikey = userprofile.objects.get(owner=request.user.id).apikey
+        if not apikey == '':
+            dashboard = meraki.DashboardAPI(
+            api_key = apikey,
+            base_url='https://api-mp.meraki.com/api/v0/',
+            log_file_prefix=os.path.basename(__file__)[:-3],
+            print_console=False
+            )
+            my_orgs = dashboard.organizations.getOrganizations()
+            org_id = []
+            org_name = []
+            for org in my_orgs:
+                org_id.append(org["id"])
+                org_name.append(org["name"])
+            orgs = dict(zip(org_name,org_id))                  
+            #return render(request, 'bulkchange.html',{'table':table,'bulk_name':bulk_name})
         data = bulk.objects.all()
         prompt = {
             'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.Please note your submission id is auto generated from the csv name',
@@ -169,36 +169,33 @@ def bulkchange(request):
                 ) 
                    
             context = {}
-            return render(request,'bulkchange.html', context ,{'bulk_name':bulk_name})
+            return render(request,'bulkchange.html', context ,{'bulk_name':bulk_name,})
         if ('preview' in request.GET) or ('validate' in request.GET) or ('genrevert' in request.GET):
             try:
                 submissionID=uuid.UUID(request.GET['sendid'],version=4)
             except ValueError:
-                return render(request, 'bulkchange.html', {'bulk_name':substable}, prompt)
+                return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs}, prompt)
             changes = bulk.objects.filter(submissionID = submissionID)
-            api_key = request.GET['apikey']
-            orgID = request.GET['orgID']
+            orgID = request.GET['orgid']
             NetID=0      
             SearchList=[]
             actions=[]
             
-            if not (api_key=='' and orgID==''):
+            if not (apikey=='' and orgID==''):
                 dashboard = meraki.DashboardAPI(
-                api_key = api_key,
+                api_key = apikey,
                 base_url='https://api-mp.meraki.com/api/v0/',
                 log_file_prefix=os.path.basename(__file__)[:-3],
                 print_console=False
                 )
-                my_orgs = dashboard.organizations.getOrganizations()
-                org_id = []
-                org_name = []
+                
+                
+                
                 net_name = []
                 net_id = []
                 new_net_id=[]
                 netcreation=[]
-                for org in my_orgs:
-                    org_id.append(org["id"])
-                    org_name.append(org["name"])
+                
                 my_nets = dashboard.networks.getOrganizationNetworks(orgID)
                 for net in my_nets:
                     net_id.append(net["id"])
@@ -344,11 +341,11 @@ def bulkchange(request):
                         
                         #https://pypi.org/project/django-encrypted-model-fields/
                         
-            return render(request, 'bulkchange.html', {'pull':changes,'search':SearchList,'netcr':netcorrect,'invalid':invalidreq,'bulk_name':substable})
+            return render(request, 'bulkchange.html', {'pull':changes,'search':SearchList,'netcr':netcorrect,'invalid':invalidreq,'bulk_name':substable,'orgs':orgs})
 
 
                
-        return render(request, 'bulkchange.html', {'bulk_name':substable}, prompt)      
+        return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs}, prompt)      
     else:
         return redirect('/')
 def backup(request):

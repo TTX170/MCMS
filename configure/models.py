@@ -1,9 +1,9 @@
 from django.db import models
-#from users.models import MerakiUser
 from django.utils import timezone
 from django.contrib.auth.models import User
 import uuid
 import datetime
+from encrypted_model_fields.fields import EncryptedCharField
 # Create your models here.
 
 class API(models.Model):
@@ -26,8 +26,6 @@ class bulk(models.Model):
     dns2 = models.CharField(max_length=200,blank = True,null=True)
     vlan = models.CharField(max_length=200,blank = True,null=True)
     nettags = models.CharField(max_length=200,blank = True,null=True)
-    #owner = models.ForeignKey(MerakiUser, on_delete=models.CASCADE, related_name="requests")
-    #revert = models.BooleanField(default = False)
     submissionID = models.ForeignKey("subtable", on_delete=models.CASCADE)
     
 class vlan(models.Model):
@@ -78,3 +76,6 @@ class subtable(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="requests")
         
 
+class userprofile(models.Model):
+    owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name="requester")
+    apikey = EncryptedCharField(max_length=100)

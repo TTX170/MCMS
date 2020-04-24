@@ -1,31 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1>Bulk Config Change</h1>
-  <h2>Org List</h2>
-  <form method="get">
-    <input type="text" name="apikey" placeholder="API key here">
-	<input type="text" name="orgID" placeholder="OrgID Here">
-	<button type="submit" name="getorg">GetOrgList</button>
-  </form>
-  <table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Name</th>
-      <th scope="col">ID</th>
-    </tr>
-  </thead>
-  <tbody>
-  {%for orgname, orgid in table%}
-  <tr>
-  <td>{{orgname}}</td>
-  <td>{{orgid}}</td>  
-  </tr>
-  {%endfor%}
-  </tbody>
-  </table>
-  <table class="table">
-
-  <p>{{search}}</p>                                                                        
+                                                                        
  {% if messages %}
         {% for message in messages %}
             <div>
@@ -88,13 +64,17 @@
   <p>Please Select the import you would like to load</p>
   <form method="get">
     <select class="form-control" name="sendid">
-	<option>-----</option>
+	<option>Select Import</option>
 	{%for i,j in bulk_name.items%}
 	<option value={{j}}>{{i}}</option>
 	{%endfor%}
   </select>
-   <input type="text" name="apikey" placeholder="API key Here">
-	<input type="text" name="orgID" placeholder="OrgID Here">
+    <select class="form-control" name="orgid">
+		<option>Select Org</option>
+		{%for i,j in orgs.items%}
+		<option value = {{j}}>{{i}}</option>
+		{%endfor%}
+	</select>
 	<input type="text" name="revertname" placeholder="Name of Backup Here">
 	<button type="submit" name="preview" class="btn btn-primary">Preview Changes</button>
 	<button type="submit" name="validate" class="btn btn-primary">Validate Changes</button>
