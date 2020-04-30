@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 import meraki, os, io, csv
 from django.contrib import messages
-from .models import bulk, subtable, userprofile
+from .models import bulk, subtable, userprofile, vlan, mxport, switch
 from django.db.models import Q
 import uuid
 import datetime
@@ -362,14 +362,81 @@ def backup(request):
     #ssid model: Netname, number, enabled, authmode, canx
     #vlan model: netname, vlan, vlanname, mxip, subnet, dhcpstatus, dhcprelayservers,
     #mxports: netname, enabled, type, dropuntag, vlan
-        print("test")
+        apikey = userprofile.objects.get(owner=request.user.id).apikey
+        subs = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupDev"))
+        sub_id=[]
+        sub_name=[]
+        for i in subs:
+            sub_id.append(i.id)
+            sub_name.append("%s-Backup-%s"%(i.submissionFname,i.date))            
+        substable = dict(zip(sub_name,sub_id))        
+        if not apikey == '':
+            dashboard = meraki.DashboardAPI(
+            api_key = apikey,
+            base_url='https://api-mp.meraki.com/api/v0/',
+            log_file_prefix=os.path.basename(__file__)[:-3],
+            print_console=False
+            )
+            my_orgs = dashboard.organizations.getOrganizations()
+            org_id = []
+            org_name = []
+            for org in my_orgs:
+                org_id.append(org["id"])
+                org_name.append(org["name"])
+            orgs = dict(zip(org_name,org_id))
+            orgoID = request.GET['orgoid']    
+            if ('backup' in request.GET):
+                
+                #generating the submission
+                backupName = request.GET['backupname']
+                subid = uuid.uuid4()
+                subtable.objects.update_or_create( 
+                    id = subid,
+                    owner = request.user,
+                    subtype = "backupOrg",
+                    submissionFname = request.GET['backupname'],
+                    date = timezone.now()
+                )
+                #get the nets and the api calls to get the info we need
+                org_nets = dashboard.networks.getOrganizationNetworks(orgoID)               
+                net_id = []
+                net_name = []
+                for net in org_nets:
+                    net_id.append(net["id"])
+                    net_name.append(net["name"])
+                networks = dict(zip(net_name,net_id))
+                for i,j in networks.items():
+                    devices = dashboard.devices.getNetworkDevices(j)
+                    switches=[]
+                    for MS in devices:
+                        if 'MS' in MS['model']:
+                            switches.append(MS['serial'])
+                    for serial in switches:
+                        netswitch = dashboard.switch_ports.getDeviceSwitchPorts(serial)
+                        for ports in netswitch:
+                            switch.objects.update_or_create(
+                                submissionID = (subtable.objects.get(id=subid)), 
+                                serial = serial,
+                                netname = i,
+                                number = ports['number'],
+                                enabled = ports['enabled'],
+                                portname = ports['name'],
+                                porttype = ports['type'],
+                                vlan = ports['vlan'],
+                                voicevlan = ports['voiceVlan'],
+                                poe = ports['poeEnabled'],
+                                stp = ports['stpGuard'],
+                                rstp = ports['rstpEnabled'],
+                                )
+                    
+                            
+                    
     
     
     
     
     
     
-    
-    
+        return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})
     else:
         return redirect('/')

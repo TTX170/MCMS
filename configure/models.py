@@ -48,8 +48,9 @@ class mxport(models.Model):
     
 class switch(models.Model):
     submissionID = models.ForeignKey("subtable", on_delete=models.CASCADE)
-    serial = models.CharField(max_length=10)
+    serial = models.CharField(max_length=16)
     netname = models.CharField(max_length=40)
+    number = models.IntegerField()
     enabled = models.CharField(max_length=10)
     portname = models.CharField(max_length=200,blank = True,null=True)
     porttype = models.CharField(max_length=200,blank = True,null=True)
@@ -68,9 +69,8 @@ class subtable(models.Model):
         choices=(
             ("addDev", "addDev"),
             ("backupDev", "backupDev"),
-            ("vlan", "vlan"),
-            ("switch", "switch"),
-            ("mxPort", "mxPort")
+            ("backupOrg", "backupORG"),
+            
         )
     )
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="requests")

@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Bulk Config Change</h1>
+
+<h2> Please Select the organisation and network you wish to backup or restore </h2>
+
+<form method="get">
+    <select class="form-control" name="backupid">
+	<option>Select backup</option>
+	{%for i,j in backups.items%}
+	<option value={{j}}>{{i}}</option>
+	{%endfor%}
+  </select>
+    <select class="form-control" name="orgoid">
+		<option>Select Org</option>
+		{%for i,j in orgs.items%}
+		<option value = {{j}}>{{i}}</option>
+		{%endfor%}
+	</select>
+	<input type="text" name="backupname" placeholder="Name of Backup Here">
+	<button type="submit" name="backup" class="btn btn-primary">Backup Changes</button>
+	<button type="submit" name="preview" class="btn btn-primary">Preview Restore</button>
+	<button type="submit" name="restore" class="btn btn-danger">Restore</button>
+  </form>
+  <div class="table-responsive">
+	  <table class="table">
+		  <thead>
+			<tr>
+			  <th scope="col">Serial</th>
+			  <th scope="col">Network Name</th>
+			  <th scope="col">Port Number</th>
+			  <th scope="col">Enabled</th>
+			  <th scope="col">Type</th>
+			  <th scope="col">Vlan</th>
+			  <th scope="col">Voice Vlan</th>
+			  <th scope="col">Rstp Enabled</th>
+			  <th scope="col">Stp Guard</th>
+			  <th scope="col">DNS1</th>
+			  <th scope="col">DNS2</th>
+			  <th scope="col">VLAN</th>
+			  <th scope="col">Net Tags</th>
+			</tr>
+		  </thead>
+		  <tbody>
+			  {% for i in vlans%}
+			  <tr>
+				  <td>{{i.serial}}</td>
+				  <td>{{i.networkname}}</td>
+				  <td>{{i.name}}</td>
+				  <td>{{i.tags}}</td>
+				  <td>{{i.notes}}</td>
+				  <td>{{i.address}}</td>
+				  <td>{{i.ip}}</td>
+				  <td>{{i.gw}}</td>
+				  <td>{{i.mask}}</td>
+				  <td>{{i.dns1}}</td>
+				  <td>{{i.dns2}}</td>
+				  <td>{{i.vlan}}</td>
+				  <td>{{i.nettags}}</td>
+			  </tr>
+			  {% endfor %}
+		  </tbody>
+	  </table>  
+  </div>
+
+
+
+
+{% endblock %}
