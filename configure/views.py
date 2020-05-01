@@ -363,7 +363,7 @@ def backup(request):
     #vlan model: netname, vlan, vlanname, mxip, subnet, dhcpstatus, dhcprelayservers,
     #mxports: netname, enabled, type, dropuntag, vlan
         apikey = userprofile.objects.get(owner=request.user.id).apikey
-        subs = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupDev"))
+        subs = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupOrg"))
         sub_id=[]
         sub_name=[]
         for i in subs:
@@ -384,9 +384,9 @@ def backup(request):
                 org_id.append(org["id"])
                 org_name.append(org["name"])
             orgs = dict(zip(org_name,org_id))
-            orgoID = request.GET['orgoid']    
+            #orgoID = request.GET['orgoid']    
             if ('backup' in request.GET):
-                
+                orgoID = request.GET['orgoid']
                 #generating the submission
                 backupName = request.GET['backupname']
                 subid = uuid.uuid4()
@@ -402,8 +402,9 @@ def backup(request):
                 net_id = []
                 net_name = []
                 for net in org_nets:
-                    net_id.append(net["id"])
-                    net_name.append(net["name"])
+                    if net['type'] == 'combined':
+                        net_id.append(net["id"])
+                        net_name.append(net["name"])
                 networks = dict(zip(net_name,net_id))
                 for i,j in networks.items():
                     devices = dashboard.devices.getNetworkDevices(j)
@@ -428,11 +429,44 @@ def backup(request):
                                 stp = ports['stpGuard'],
                                 rstp = ports['rstpEnabled'],
                                 )
-                    
+                    vlans = dashboard.vlans.getNetworkVlans(j)
+                    for netvlan in vlans:
+                        if 'dhcpServerIPs' in netvlan: relayserver = netvlan['dhcpServerIPs']
+                        else: relayserver = None
+                        vlan.objects.update_or_create(
+                            submissionID = (subtable.objects.get(id=subid)),
+                            netname = i,
+                            vlan = netvlan['id'],
+                            vlanname = netvlan['name'],
+                            mxip = netvlan['applianceIp'],
+                            subnet = netvlan['subnet'],
+                            dhcpstatus = netvlan['dhcpHandling'],
+                            dhcprelayservers = relayserver,
+                            )
+                    mxports = dashboard.mx_vlan_ports.getNetworkAppliancePorts(j)
+                    for ports in mxports:
+                        if 'vlan' in ports: mxvlan = ports['vlan']
+                        else: mxvlan = None
+                        mxport.objects.update_or_create(
+                            submissionID = (subtable.objects.get(id=subid)),
+                            netname = i,
+                            number = ports['number'],
+                            enabled = ports['enabled'],
+                            porttype = ports['type'],
+                            dropuntag = ports['dropUntaggedTraffic'],
+                            vlan = mxvlan,
+                        )
+                return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})   
                             
-                    
-    
-    
+            if ('preview' in request.GET):
+                try:
+                    previewID=uuid.UUID(request.GET['backupid'],version=4)
+                except ValueError:
+                    return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})
+                previewswitch = switch.objects.filter(submissionID = previewID)
+                previewvlan = vlan.objects.filter(submissionID = previewID)
+                previewmxports = mxport.objects.filter(submissionID = previewID)
+                return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'switch':previewswitch,'vlans':previewvlan,'mxports':previewmxports})
     
     
     

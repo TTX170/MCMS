@@ -41,6 +41,7 @@ class vlan(models.Model):
 class mxport(models.Model):
     submissionID = models.ForeignKey("subtable", on_delete=models.CASCADE)
     netname = models.CharField(max_length=40)
+    number = models.IntegerField()
     enabled = models.CharField(max_length=10)
     porttype = models.CharField(max_length=200,blank = True,null=True)
     dropuntag = models.CharField(max_length=200,blank = True,null=True)

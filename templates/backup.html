@@ -22,12 +22,14 @@
 	<button type="submit" name="preview" class="btn btn-primary">Preview Restore</button>
 	<button type="submit" name="restore" class="btn btn-danger">Restore</button>
   </form>
+  <p>Switch Ports</p>
   <div class="table-responsive">
 	  <table class="table">
 		  <thead>
 			<tr>
 			  <th scope="col">Serial</th>
 			  <th scope="col">Network Name</th>
+			  <th scope="col">Port Name</th>
 			  <th scope="col">Port Number</th>
 			  <th scope="col">Enabled</th>
 			  <th scope="col">Type</th>
@@ -35,35 +37,84 @@
 			  <th scope="col">Voice Vlan</th>
 			  <th scope="col">Rstp Enabled</th>
 			  <th scope="col">Stp Guard</th>
-			  <th scope="col">DNS1</th>
-			  <th scope="col">DNS2</th>
-			  <th scope="col">VLAN</th>
-			  <th scope="col">Net Tags</th>
+			  <th scope="col">Poe Enabled</th>			  
 			</tr>
 		  </thead>
 		  <tbody>
-			  {% for i in vlans%}
+			  {% for i in switch%}
 			  <tr>
 				  <td>{{i.serial}}</td>
-				  <td>{{i.networkname}}</td>
-				  <td>{{i.name}}</td>
-				  <td>{{i.tags}}</td>
-				  <td>{{i.notes}}</td>
-				  <td>{{i.address}}</td>
-				  <td>{{i.ip}}</td>
-				  <td>{{i.gw}}</td>
-				  <td>{{i.mask}}</td>
-				  <td>{{i.dns1}}</td>
-				  <td>{{i.dns2}}</td>
+				  <td>{{i.netname}}</td>
+				  <td>{{i.portname}}</td>
+				  <td>{{i.number}}</td>
+				  <td>{{i.enabled}}</td>
+				  <td>{{i.porttype}}</td>
 				  <td>{{i.vlan}}</td>
-				  <td>{{i.nettags}}</td>
+				  <td>{{i.voicevlan}}</td>
+				  <td>{{i.rstp}}</td>
+				  <td>{{i.stp}}</td>
+				  <td>{{i.poe}}</td>				  
 			  </tr>
 			  {% endfor %}
 		  </tbody>
 	  </table>  
   </div>
-
-
-
-
+  <p>Vlans</p>
+  <div class="table-responsive">
+	  <table class="table">
+		  <thead>
+			<tr>
+			  
+			  <th scope="col">Network Name</th>
+			  <th scope="col">Vlan ID</th>
+			  <th scope="col">Vlan Name</th>
+			  <th scope="col">Subnet</th>
+			  <th scope="col">MX IP</th>
+			  <th scope="col">Dhcp Status</th>
+			  <th scope="col">Dhcp Relay Server</th>			  
+			</tr>
+		  </thead>
+		  <tbody>
+			  {% for i in vlans%}
+			  <tr>
+				  
+				  <td>{{i.netname}}</td>
+				  <td>{{i.vlan}}</td>
+				  <td>{{i.vlanname}}</td>
+				  <td>{{i.subnet}}</td>
+				  <td>{{i.mxip}}</td>
+				  <td>{{i.dhcpstatus}}</td>
+				  <td>{{i.dhcprelayservers}}</td>
+			  </tr>
+			  {% endfor %}
+		  </tbody>
+	  </table>  
+  </div>
+    <p>Mx Ports</p>
+  <div class="table-responsive">
+	  <table class="table">
+		  <thead>
+			<tr>
+			  <th scope="col">Network Name</th>
+			  <th scope="col">Port Number</th>
+			  <th scope="col">Enabled</th>
+			  <th scope="col">Port Type</th>
+			  <th scope="col">Drop Untagged Traffic</th>
+			  <th scope="col">Vlan</th>			  
+			</tr>
+		  </thead>
+		  <tbody>
+			  {% for i in mxports%}
+			  <tr>
+				  <td>{{i.netname}}</td>
+				  <td>{{i.number}}</td>
+				  <td>{{i.enabled}}</td>
+				  <td>{{i.porttype}}</td>
+				  <td>{{i.dropuntag}}</td>
+				  <td>{{i.vlan}}</td>
+			  </tr>
+			  {% endfor %}
+		  </tbody>
+	  </table>  
+  </div>
 {% endblock %}
