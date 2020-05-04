@@ -46,6 +46,7 @@ class mxport(models.Model):
     porttype = models.CharField(max_length=200,blank = True,null=True)
     dropuntag = models.CharField(max_length=200,blank = True,null=True)
     vlan = models.CharField(max_length=200,blank = True,null=True)
+    allowedvlans = models.CharField(max_length=200,blank = True,null=True)
     
 class switch(models.Model):
     submissionID = models.ForeignKey("subtable", on_delete=models.CASCADE)

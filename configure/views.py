@@ -366,6 +366,7 @@ def backup(request):
         subs = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupOrg"))
         sub_id=[]
         sub_name=[]
+        nets={}
         for i in subs:
             sub_id.append(i.id)
             sub_name.append("%s-Backup-%s"%(i.submissionFname,i.date))            
@@ -384,17 +385,26 @@ def backup(request):
                 org_id.append(org["id"])
                 org_name.append(org["name"])
             orgs = dict(zip(org_name,org_id))
-            #orgoID = request.GET['orgoid']    
-            if ('backup' in request.GET):
-                orgoID = request.GET['orgoid']
+            #orgoID = request.GET['orgoid'] 
+            if ('refresh' in request.POST):
+                orgoID = request.POST['orgoid']
+                my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
+                net_id = []
+                net_name = []
+                for net in my_nets:
+                    net_id.append(net["id"])
+                    net_name.append(net["name"])
+                nets = dict(zip(net_name,net_id)) 
+            if ('backup' in request.POST):
+                orgoID = request.POST['orgoid']
                 #generating the submission
-                backupName = request.GET['backupname']
+                backupName = request.POST['backupname']
                 subid = uuid.uuid4()
                 subtable.objects.update_or_create( 
                     id = subid,
                     owner = request.user,
                     subtype = "backupOrg",
-                    submissionFname = request.GET['backupname'],
+                    submissionFname = request.POST['backupname'],
                     date = timezone.now()
                 )
                 #get the nets and the api calls to get the info we need
@@ -407,70 +417,150 @@ def backup(request):
                         net_name.append(net["name"])
                 networks = dict(zip(net_name,net_id))
                 for i,j in networks.items():
-                    devices = dashboard.devices.getNetworkDevices(j)
-                    switches=[]
-                    for MS in devices:
-                        if 'MS' in MS['model']:
-                            switches.append(MS['serial'])
-                    for serial in switches:
-                        netswitch = dashboard.switch_ports.getDeviceSwitchPorts(serial)
-                        for ports in netswitch:
-                            switch.objects.update_or_create(
-                                submissionID = (subtable.objects.get(id=subid)), 
-                                serial = serial,
+                    try:    
+                        devices = dashboard.devices.getNetworkDevices(j)
+                        switches=[]
+                        for MS in devices:
+                            if 'MS' in MS['model']:
+                                switches.append(MS['serial'])
+                        for serial in switches:
+                            netswitch = dashboard.switch_ports.getDeviceSwitchPorts(serial)
+                            for ports in netswitch:
+                                switch.objects.update_or_create(
+                                    submissionID = (subtable.objects.get(id=subid)), 
+                                    serial = serial,
+                                    netname = i,
+                                    number = ports['number'],
+                                    enabled = ports['enabled'],
+                                    portname = ports['name'],
+                                    porttype = ports['type'],
+                                    vlan = ports['vlan'],
+                                    voicevlan = ports['voiceVlan'],
+                                    poe = ports['poeEnabled'],
+                                    stp = ports['stpGuard'],
+                                    rstp = ports['rstpEnabled'],
+                                    )
+                    except:
+                        print("beep")
+                    try:
+                        vlans = dashboard.vlans.getNetworkVlans(j)                    
+                        for netvlan in vlans:
+                            if 'dhcpServerIPs' in netvlan: relayserver = netvlan['dhcpServerIPs']
+                            else: relayserver = None
+                            vlan.objects.update_or_create(
+                                submissionID = (subtable.objects.get(id=subid)),
+                                netname = i,
+                                vlan = netvlan['id'],
+                                vlanname = netvlan['name'],
+                                mxip = netvlan['applianceIp'],
+                                subnet = netvlan['subnet'],
+                                dhcpstatus = netvlan['dhcpHandling'],
+                                dhcprelayservers = relayserver,
+                                )
+                    except:
+                        print("beep")
+                    try:    
+                        mxports = dashboard.mx_vlan_ports.getNetworkAppliancePorts(j)
+                        for ports in mxports:
+                            if 'vlan' in ports: mxvlan = ports['vlan']
+                            else: mxvlan = None
+                            if ports['type'] == 'access':
+                                avlans = 'N/A'
+                            else:
+                                avlan = ports['allowedVlans'] 
+                            mxport.objects.update_or_create(
+                                submissionID = (subtable.objects.get(id=subid)),
                                 netname = i,
                                 number = ports['number'],
                                 enabled = ports['enabled'],
-                                portname = ports['name'],
                                 porttype = ports['type'],
-                                vlan = ports['vlan'],
-                                voicevlan = ports['voiceVlan'],
-                                poe = ports['poeEnabled'],
-                                stp = ports['stpGuard'],
-                                rstp = ports['rstpEnabled'],
-                                )
-                    vlans = dashboard.vlans.getNetworkVlans(j)
-                    for netvlan in vlans:
-                        if 'dhcpServerIPs' in netvlan: relayserver = netvlan['dhcpServerIPs']
-                        else: relayserver = None
-                        vlan.objects.update_or_create(
-                            submissionID = (subtable.objects.get(id=subid)),
-                            netname = i,
-                            vlan = netvlan['id'],
-                            vlanname = netvlan['name'],
-                            mxip = netvlan['applianceIp'],
-                            subnet = netvlan['subnet'],
-                            dhcpstatus = netvlan['dhcpHandling'],
-                            dhcprelayservers = relayserver,
+                                dropuntag = ports['dropUntaggedTraffic'],
+                                vlan = mxvlan,
+                                allowedvlans = avlan,
                             )
-                    mxports = dashboard.mx_vlan_ports.getNetworkAppliancePorts(j)
-                    for ports in mxports:
-                        if 'vlan' in ports: mxvlan = ports['vlan']
-                        else: mxvlan = None
-                        mxport.objects.update_or_create(
-                            submissionID = (subtable.objects.get(id=subid)),
-                            netname = i,
-                            number = ports['number'],
-                            enabled = ports['enabled'],
-                            porttype = ports['type'],
-                            dropuntag = ports['dropUntaggedTraffic'],
-                            vlan = mxvlan,
-                        )
+                    except:
+                        print("beep")
                 return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})   
                             
-            if ('preview' in request.GET):
+            if ('preview' in request.POST):
+                orgoID = request.POST['orgoid']
+                netlist=[]
+                for i in dashboard.networks.getOrganizationNetworks(orgoID):
+                    netlist.append(i["name"])
                 try:
-                    previewID=uuid.UUID(request.GET['backupid'],version=4)
+                    previewID=uuid.UUID(request.POST['backupid'],version=4)
                 except ValueError:
                     return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})
-                previewswitch = switch.objects.filter(submissionID = previewID)
-                previewvlan = vlan.objects.filter(submissionID = previewID)
-                previewmxports = mxport.objects.filter(submissionID = previewID)
+                print (request.POST["netid"])
+                print ("beep")
+                if request.POST["netid"] == "All":
+                    previewswitch = switch.objects.filter(submissionID = previewID)
+                    previewvlan = vlan.objects.filter(submissionID = previewID)
+                    previewmxports = mxport.objects.filter(submissionID = previewID)
+                elif request.POST["netid"] in netlist:
+                    previewnet = request.POST["netid"]
+                    previewswitch = switch.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                    previewvlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                    previewmxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                else:
+                    print("error")
                 return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'switch':previewswitch,'vlans':previewvlan,'mxports':previewmxports})
-    
-    
-    
-    
-        return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})
+            
+            if ('restore' in request.POST):
+                try:
+                    previewID=uuid.UUID(request.POST['backupid'],version=4)
+                except ValueError:
+                    return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})
+                orgoID = request.POST['orgoid']
+                netlist=[]
+                for i in dashboard.networks.getOrganizationNetworks(orgoID):
+                    netlist.append(i["name"])
+                if request.POST["netid"] == "All":
+                    restoreswitch = switch.objects.filter(submissionID = previewID)
+                    restorevlan = vlan.objects.filter(submissionID = previewID)
+                    restoremxports = mxport.objects.filter(submissionID = previewID)
+                elif request.POST["netid"] in netlist:
+                    restoreswitch = switch.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                    restorevlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                    restoremxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                else:
+                    print("error")
+                net_id=[]
+                net_name=[]
+                my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
+                for net in my_nets:
+                    net_id.append(net["id"])
+                    net_name.append(net["name"])
+                restorenetworks = dict(zip(net_name,net_id))
+                for serial in restoreswitch:
+                    #restorenetID = restorenetworks(serial.netname)
+                    dashboard.switch_ports.updateDeviceSwitchPort(serial.serial, serial.number, 
+                        name = serial.portname, 
+                        enabled = serial.enabled, 
+                        type = serial.porttype, 
+                        vlan = serial.vlan, 
+                        voicevlan = serial.voicevlan, 
+                        rstpEnabled = serial.rstp, 
+                        stpGuard = serial.stp, 
+                        poeEnabled = serial.poe
+                        )
+                for network in restoremxports:
+                    restorenetID = restorenetworks[network.netname]
+                    if network.porttype =='trunk':
+                        dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
+                            enabled = network.enabled,
+                            type = network.porttype,
+                            vlan = network.vlan,
+                            dropUntaggedTraffic = network.dropuntag,
+                            allowedVlans = network.allowedvlans,
+                            )
+                    else: 
+                        dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
+                            enabled = network.enabled,
+                            type = network.porttype,
+                            vlan = network.vlan,
+                            dropUntaggedTraffic = network.dropuntag,
+                            )
+        return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'nets':nets})
     else:
         return redirect('/')

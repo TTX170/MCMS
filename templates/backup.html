@@ -4,7 +4,7 @@
 
 <h2> Please Select the organisation and network you wish to backup or restore </h2>
 
-<form method="get">
+<form method="post">
     <select class="form-control" name="backupid">
 	<option>Select backup</option>
 	{%for i,j in backups.items%}
@@ -17,11 +17,30 @@
 		<option value = {{j}}>{{i}}</option>
 		{%endfor%}
 	</select>
+	 <select class="form-control" name="netid">
+		<option>Select Network</option>
+		<option>All</option>
+		{%for i,j in nets.items%}
+		<option>{{i}}</option>
+		{%endfor%}
+	</select>
+	<button type="submit" name="refresh" class="btn btn-primary">Refresh Networks</button>
 	<input type="text" name="backupname" placeholder="Name of Backup Here">
 	<button type="submit" name="backup" class="btn btn-primary">Backup Changes</button>
 	<button type="submit" name="preview" class="btn btn-primary">Preview Restore</button>
 	<button type="submit" name="restore" class="btn btn-danger">Restore</button>
+	{% csrf_token %}
   </form>
+  
+  <!-- <form action "/configure/backup" method="post">
+	<select class="form-control" name="backupid">
+	<option>Select backup</option>
+	{%for i,j in backups.items%}
+	<option value={{j}}>{{i}}</option>
+	{%endfor%}
+  </select>
+  
+  </form> -->
   <p>Switch Ports</p>
   <div class="table-responsive">
 	  <table class="table">
@@ -71,7 +90,8 @@
 			  <th scope="col">Subnet</th>
 			  <th scope="col">MX IP</th>
 			  <th scope="col">Dhcp Status</th>
-			  <th scope="col">Dhcp Relay Server</th>			  
+			  <th scope="col">Dhcp Relay Server</th>
+			  
 			</tr>
 		  </thead>
 		  <tbody>
@@ -100,7 +120,8 @@
 			  <th scope="col">Enabled</th>
 			  <th scope="col">Port Type</th>
 			  <th scope="col">Drop Untagged Traffic</th>
-			  <th scope="col">Vlan</th>			  
+			  <th scope="col">Vlan</th>
+			  <th scope="col">Allowed Vlans</th>
 			</tr>
 		  </thead>
 		  <tbody>
@@ -112,6 +133,7 @@
 				  <td>{{i.porttype}}</td>
 				  <td>{{i.dropuntag}}</td>
 				  <td>{{i.vlan}}</td>
+				  <td>{{i.allowedvlans}}</td>
 			  </tr>
 			  {% endfor %}
 		  </tbody>
