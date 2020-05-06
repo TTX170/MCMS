@@ -1,22 +1,20 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2> Welcome to the configure section of MCMS, Below are links to the tools offered here</h2>
-<form action="Tools" method="post">
-{% csrf_token %}
-<button type="submit" class="btn btn-primary btn-lg btn-block">Tools</button>
-</form>
 
-<form action="BulkChange" method="post">
-{% csrf_token %}
-<button type="submit" class="btn btn-primary btn-lg btn-block">Bulk Change Tool</button>
-</form>
-<form action="Backup" method="post">
-{% csrf_token %}
-<button type="submit" class="btn btn-primary btn-lg btn-block">Backup</button>
-</form>
 
-<form action="Tools" method="post">
-{% csrf_token %}
-<button type="button" class="btn btn-danger btn-lg btn-block">Log Out</button>
-</form>
-{% endblock %}
+
+
+
+
+
+<div class="jumbotron">
+  <h1 class="display-4">Tooling Home</h1>
+  <p class="lead">Welcome to tooling home, below you can find links to the respective tools that are part of this site</p>
+  <hr class="my-4">
+  {% if user.is_superuser %}
+  <a class="btn btn-primary btn-lg" href="{% url 'apicheck' %}" role="button">Admin Tools</a>
+  {%endif%}
+  <a class="btn btn-primary btn-lg" href="{% url 'bulkchange' %}" role="button">Bulk Configuration</a>
+  <a class="btn btn-primary btn-lg" href="{% url 'backup' %}" role="button">Backup/Restore Org</a>
+</div>
+{%endblock%}

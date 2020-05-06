@@ -513,6 +513,7 @@ def backup(request):
                     return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})
                 orgoID = request.POST['orgoid']
                 netlist=[]
+                
                 for i in dashboard.networks.getOrganizationNetworks(orgoID):
                     netlist.append(i["name"])
                 if request.POST["netid"] == "All":
@@ -561,6 +562,61 @@ def backup(request):
                             vlan = network.vlan,
                             dropUntaggedTraffic = network.dropuntag,
                             )
+                distinctvlans = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"])).distinct('netname')
+                for i in distinctvlans:
+                    restorenetID = restorenetworks[i.netname]
+                    if not dashboard.vlans.getNetworkVlansEnabledState(restorenetID): dashboard.vlans.updateVlansEnabledState(restorenetID, True)                    
+                    orgvlans = dashboard.vlans.getNetworkVlans(restorenetID)
+                    currentVlanList = []
+                    for j in orgvlans: currentVlanList.append(orgvlans['id'])
+                    restorevlans = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = i.netname))
+                    for j in restorevlans:                            
+                        if j in currerentVlanLst:
+                            if j.dhcpstatus == 'Relay DHCP to another server':
+                                dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
+                                name = j.vlanname,
+                                subnet = j.subnet,
+                                mxip = j.mxip,
+                                dhcpHandling = j.dhcpstatus,
+                                dhcpRelayServerIPs = j.dhcprelayservers,   #need to filter this out if handling isn't relay                                      
+                                )
+                            else:
+                                dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
+                                name = j.vlanname,
+                                subnet = j.subnet,
+                                mxip = j.mxip,
+                                dhcpHandling = j.dhcpstatus
+                                )
+                        else: 
+                            if j.dhcpstatus == 'Relay DHCP to another server':
+                                dashboard.createNetworkVlan(restorenetID, j.vlan,
+                                j.vlanname,
+                                j.subnet,
+                                j.mxip,
+                                )
+                                dashboard.updateNetworkVlan(restorenetID, j.vlan,
+                                dhcpHandling = j.dhcpstatus,
+                                dhcpRelayServerIPs = j.dhcprelayservers,
+                                )
+                            else: 
+                                dashboard.createNetworkVlan(restorenetID, j.vlan,
+                                j.vlanname,
+                                j.subnet,
+                                j.mxip,
+                                )
+                                dashboard.updateNetworkVlan(restorenetID, j.vlan,
+                                dhcpHandling = j.dhcpstatus,                                
+                                )
+                                
+                            
+                # for restvlan in restorevlans:
+                    # restorenetID = restorenetworks[vlan.netname]
+                    # orgvlans = dashboard.vlans.getNetworkVlans(restorenetID)
+                    # currentVlanList = []
+                    # for i in orgvlans: currentVlanList.append(orgvlans['id'])
+                    # if restvlan in orgvlans:
+                        # dashboard.vlans.updateNetworkVlan(restorenetID, vlans.vlan)# not fone here
+                        
         return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'nets':nets})
     else:
         return redirect('/')
