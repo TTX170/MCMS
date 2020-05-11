@@ -12,7 +12,7 @@ from django.http import HttpResponse
 #from django.shortcuts import redirect
 
 def apicheck(request):
-    if request.user.is_authenticated:
+    if request.user.is_superuser:
         my_orgs = ''
         GetOrgList = ''
         table = []
@@ -109,8 +109,10 @@ def bulkchange(request):
             else:
                 bulk_name.append("%s-Backup-%s"%(i.submissionFname,i.date))
         substable = dict(zip(bulk_name,bulk_id))
-         
-        apikey = userprofile.objects.get(owner=request.user.id).apikey
+        try: 
+            apikey = userprofile.objects.get(owner=request.user.id).apikey
+        except:
+            return redirect('profile')
         if not apikey == '':
             dashboard = meraki.DashboardAPI(
             api_key = apikey,
@@ -170,7 +172,7 @@ def bulkchange(request):
                    
             context = {}
             return render(request,'bulkchange.html', context ,{'bulk_name':bulk_name,})
-        if ('preview' in request.GET) or ('validate' in request.GET) or ('genrevert' in request.GET):
+        if ('preview' in request.POST) or ('validate' in request.POST) or ('genrevert' in request.POST):
             try:
                 submissionID=uuid.UUID(request.GET['sendid'],version=4)
             except ValueError:
@@ -350,19 +352,11 @@ def bulkchange(request):
         return redirect('/')
 def backup(request):
     if request.user.is_authenticated:  
-    #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/ssids/get-network-ssids
-    #https://developer.cisco.com/meraki/api/#/rest/api-endpoints/switch-ports/get-device-switch-ports
-    #Big plan 
-    #Get the networks and devices (will just bundle this in the bulk tool)
-    #get the ssid's: probably not worth as can't configure radius and you should really be using templates for this.
-    #get the vlans
-    #get the get the per port vlan settings on the mx's
-    #get the switchports
-    #switchport model: Serial,number, name, enabled, poe, vlan, voice vlan, type, rstp, stp
-    #ssid model: Netname, number, enabled, authmode, canx
-    #vlan model: netname, vlan, vlanname, mxip, subnet, dhcpstatus, dhcprelayservers,
-    #mxports: netname, enabled, type, dropuntag, vlan
-        apikey = userprofile.objects.get(owner=request.user.id).apikey
+        try: 
+            apikey = userprofile.objects.get(owner=request.user.id).apikey
+        except:
+            return redirect('profile')
+        
         subs = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupOrg"))
         sub_id=[]
         sub_name=[]
@@ -483,10 +477,14 @@ def backup(request):
                 return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})   
                             
             if ('preview' in request.POST):
-                orgoID = request.POST['orgoid']
-                netlist=[]
-                for i in dashboard.networks.getOrganizationNetworks(orgoID):
-                    netlist.append(i["name"])
+                try:
+                    orgoID = request.POST['orgoid']
+                    netlist=[]
+                    for i in dashboard.networks.getOrganizationNetworks(orgoID):
+                        netlist.append(i["name"])
+                except:
+                    Error = "Please Select a Valid Organisation"
+                    return render(request, 'backup.html', {'orgs':orgs,'error':Error})
                 try:
                     previewID=uuid.UUID(request.POST['backupid'],version=4)
                 except ValueError:
@@ -503,7 +501,8 @@ def backup(request):
                     previewvlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
                     previewmxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
                 else:
-                    print("error")
+                    Error = "No matching networks found"
+                    return render(request, 'backup.html', {'orgs':orgs,'error':Error,'backups':substable})
                 return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'switch':previewswitch,'vlans':previewvlan,'mxports':previewmxports})
             
             if ('restore' in request.POST):
@@ -609,14 +608,39 @@ def backup(request):
                                 )
                                 
                             
-                # for restvlan in restorevlans:
-                    # restorenetID = restorenetworks[vlan.netname]
-                    # orgvlans = dashboard.vlans.getNetworkVlans(restorenetID)
-                    # currentVlanList = []
-                    # for i in orgvlans: currentVlanList.append(orgvlans['id'])
-                    # if restvlan in orgvlans:
-                        # dashboard.vlans.updateNetworkVlan(restorenetID, vlans.vlan)# not fone here
+      
                         
         return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'nets':nets})
     else:
         return redirect('/')
+ 
+def profile(request):
+    if request.user.is_authenticated:
+        try:
+            key = userprofile.objects.get(owner=request.user.id).apikey
+            message = "You may change your API Key Below"
+        except:
+            key = ''
+            
+            message = "Please Enter your API into the box"
+        if 'key' in request.POST and not request.POST['key']=='':
+            try:
+                newkey = request.POST['key']
+                dashboard = meraki.DashboardAPI(
+                api_key = newkey,
+                base_url='https://api-mp.meraki.com/api/v0/',
+                log_file_prefix=os.path.basename(__file__)[:-3],
+                print_console=False
+                )
+                dashboard.organizations.getOrganizations()
+            except:
+                message = "Api Key is invalid please try again"
+                return render(request, 'profile.html',{'message':message})
+            userprofile.objects.get_or_create(owner=request.user) 
+            userprofile.objects.update(apikey = newkey)
+            key = userprofile.objects.get(owner=request.user.id).apikey
+            message = "Key has been update successfuly"
+        return render(request, 'profile.html',{'message':message, 'currentkey':key})
+    else:
+        return redirect('/')
+    

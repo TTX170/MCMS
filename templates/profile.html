@@ -1,0 +1,13 @@
+{%extends 'base.html'%}
+{%block content%}
+<div class="jumbotron">
+<h1 class="display-4">Api Key Change</h1>
+<hr class="my-4">
+<p class="lead">{{message}}</p>
+<form method="post">
+<input type="text" name="key" value="{{currentkey}}" placeholder="Please Enter your key">
+<button type="submit" name="Subkey" class="btn btn-primary">Save Key</button>
+{%csrf_token%}
+</form>
+{%endblock%}
+</div>

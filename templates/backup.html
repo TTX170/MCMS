@@ -1,9 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Bulk Config Change</h1>
+<div class="jumbotron">
+ {% if error %}
+		<div class="alert alert-danger" role="alert">{{error}}</div>
+	 {%endif%}
+ <h1 class="display-4">Backup/Restore</h1>
 
-<h2> Please Select the organisation and network you wish to backup or restore </h2>
-
+<p class="lead">Please Select the organisation and network you wish to backup or restore <p>
+<hr class="my-4">
 <form method="post">
     <select class="form-control" name="backupid">
 	<option>Select backup</option>
@@ -31,7 +35,7 @@
 	<button type="submit" name="restore" class="btn btn-danger">Restore</button>
 	{% csrf_token %}
   </form>
-  
+  </div>
   <!-- <form action "/configure/backup" method="post">
 	<select class="form-control" name="backupid">
 	<option>Select backup</option>
@@ -41,10 +45,11 @@
   </select>
   
   </form> -->
-  <p>Switch Ports</p>
+{%if switch%} 
+<p class="lead">Switch Ports</p>
   <div class="table-responsive">
-	  <table class="table">
-		  <thead>
+	  <table class="table table-striped table-bordered">
+		  <thead class="thead-dark">
 			<tr>
 			  <th scope="col">Serial</th>
 			  <th scope="col">Network Name</th>
@@ -78,10 +83,12 @@
 		  </tbody>
 	  </table>  
   </div>
-  <p>Vlans</p>
+{%endif%}
+{%if vlans%}
+  <p class="lead">Vlans</p>
   <div class="table-responsive">
-	  <table class="table">
-		  <thead>
+	  <table class="table table-striped table-bordered">
+		  <thead class="thead-dark">
 			<tr>
 			  
 			  <th scope="col">Network Name</th>
@@ -110,10 +117,12 @@
 		  </tbody>
 	  </table>  
   </div>
-    <p>Mx Ports</p>
+{%endif%} 
+{%if mxports%}  
+  <p class="lead">Mx Ports</p>
   <div class="table-responsive">
-	  <table class="table">
-		  <thead>
+	  <table class="table table-striped table-bordered">
+		  <thead class = "thead-dark">
 			<tr>
 			  <th scope="col">Network Name</th>
 			  <th scope="col">Port Number</th>
@@ -137,6 +146,8 @@
 			  </tr>
 			  {% endfor %}
 		  </tbody>
-	  </table>  
+	  </table>
+{%endif%}	  
+	
   </div>
 {% endblock %}

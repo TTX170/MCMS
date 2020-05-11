@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Bulk Config Change</h1>
+<div class="jumbotron">
+{% if error %}
+	<div class="alert alert-danger" role="alert">{{error}}</div>
+{%endif%}
+<h1 class="display-4">Bulk Config Change</h1>
+<hr class="my-4">
                                                                         
  {% if messages %}
         {% for message in messages %}
@@ -21,9 +26,32 @@
     {% for profile in profiles %}
     {{profile.name}}
     {% endfor %}
+	  <div>
+ <hr class="my-4"> 
+  <form method="post">
+    <select class="form-control" name="sendid">
+	<option>Select Import</option>
+	{%for i,j in bulk_name.items%}
+	<option value={{j}}>{{i}}</option>
+	{%endfor%}
+  </select>
+    <select class="form-control" name="orgid">
+		<option>Select Org</option>
+		{%for i,j in orgs.items%}
+		<option value = {{j}}>{{i}}</option>
+		{%endfor%}
+	</select>
+	<input type="text" name="revertname" placeholder="Name of Backup Here">
+	<button type="submit" name="preview" class="btn btn-primary">Preview Changes</button>
+	<button type="submit" name="validate" class="btn btn-primary">Validate Changes</button>
+	<button type="submit" name="Commit" class="btn btn-danger">Commit Changes</button>
+	<button type="submit" name="genrevert" class="btn btn-danger">BackupDevices</button>
+  </form>
+  </div>
+  {%if pull%}
   <div class="table-responsive">
-	  <table class="table">
-		  <thead>
+	  <table class="table table-bordered table-striped">
+		  <thead class="thead-dark">
 			<tr>
 			  <th scope="col">Serial</th>
 			  <th scope="col">Network Name</th>
@@ -62,27 +90,10 @@
 	  </table>  
   </div>
   <p>Please Select the import you would like to load</p>
-  <form method="get">
-    <select class="form-control" name="sendid">
-	<option>Select Import</option>
-	{%for i,j in bulk_name.items%}
-	<option value={{j}}>{{i}}</option>
-	{%endfor%}
-  </select>
-    <select class="form-control" name="orgid">
-		<option>Select Org</option>
-		{%for i,j in orgs.items%}
-		<option value = {{j}}>{{i}}</option>
-		{%endfor%}
-	</select>
-	<input type="text" name="revertname" placeholder="Name of Backup Here">
-	<button type="submit" name="preview" class="btn btn-primary">Preview Changes</button>
-	<button type="submit" name="validate" class="btn btn-primary">Validate Changes</button>
-	<button type="submit" name="Commit" class="btn btn-danger">Commit Changes</button>
-	<button type="submit" name="genrevert" class="btn btn-danger">BackupDevices</button>
-  </form>
+  <div>
+  {%endif%}
   
-  <p>{{ netcr }}</p>
-  <p>{{ invalid }}</p>
+
+
 
 {% endblock %}

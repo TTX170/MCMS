@@ -3,11 +3,19 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-{% if user.is_authenticated %}
-  Hi {{ user.username }}!
-  <p><a href="{% url 'logout' %}">logout</a></p>
-{% else %}
-  <p>You are not logged in</p>
-  <a href="{% url 'login' %}">login</a>
-{% endif %}
-{% endblock %}
+
+<div class="jumbotron">
+  <h1 class="display-4">Welcome to MCMS</h1>
+  {% if user.is_authenticated %}
+  <p class="lead">Hello {{user.username}}</p>
+  <hr class="my-4">
+  <p>If you've made it here you've either tried to access a page you shouldn't or the redirection has failed, either way, select a link along the top to jump back in.</p>
+  {%else%}
+  <p class="lead">If you have credentials please login below, If not please contact your administraitor</p>
+   <hr class="my-4">
+  <p>Click Below to login</p>
+  <a class="btn btn-primary btn-lg" href="{%url 'login'%}" role="button">Login</a>
+  {%endif%}
+  
+</div> 
+{%endblock%}

@@ -7,4 +7,5 @@ urlpatterns = [
     path('', views.home, name='confhome'),
     path('BulkChange', views.bulkchange, name='bulkchange'),
     path('Backup', views.backup, name='backup'),
+    path('Profile', views.profile, name='profile'),
 ]
