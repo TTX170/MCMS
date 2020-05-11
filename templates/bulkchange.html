@@ -1,5 +1,10 @@
 {% extends 'base.html' %}
 {% block content %}
+<script>
+$(document).ready(function(){
+  $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
 <div class="jumbotron">
 {% if error %}
 	<div class="alert alert-danger" role="alert">{{error}}</div>
@@ -45,8 +50,10 @@
 	<button type="submit" name="preview" class="btn btn-primary">Preview Changes</button>
 	<button type="submit" name="validate" class="btn btn-primary">Validate Changes</button>
 	<button type="submit" name="Commit" class="btn btn-danger">Commit Changes</button>
-	<button type="submit" name="genrevert" class="btn btn-danger">BackupDevices</button>
+	<button type="submit" name="genrevert" class="btn btn-danger" data-toggle="tooltip" data-placement="bottom" title="If no import is select a full org backup will take place">BackupDevices</button>
+	{%csrf_token%}
   </form>
+  </div>
   </div>
   {%if pull%}
   <div class="table-responsive">

@@ -13,6 +13,7 @@
   <hr class="my-4">
   {% if user.is_superuser %}
   <a class="btn btn-primary btn-lg" href="{% url 'apicheck' %}" role="button">Admin Tools</a>
+  <a class="btn btn-primary btn-lg" href="{% url 'admin:index' %}" role="button">Django Admin</a>
   {%endif%}
   <a class="btn btn-primary btn-lg" href="{% url 'bulkchange' %}" role="button">Bulk Configuration</a>
   <a class="btn btn-primary btn-lg" href="{% url 'backup' %}" role="button">Backup/Restore Org</a>

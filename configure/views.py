@@ -173,14 +173,32 @@ def bulkchange(request):
             context = {}
             return render(request,'bulkchange.html', context ,{'bulk_name':bulk_name,})
         if ('preview' in request.POST) or ('validate' in request.POST) or ('genrevert' in request.POST):
+            # try:
+                # orgID = request.GET['orgid']
+            # except:
+                # Error = "Please select a valid Org"
+                # return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs,'error':Error}, prompt)
+                
             try:
-                submissionID=uuid.UUID(request.GET['sendid'],version=4)
-            except ValueError:
-                return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs}, prompt)
-            changes = bulk.objects.filter(submissionID = submissionID)
-            orgID = request.GET['orgid']
+                submissionID=uuid.UUID(request.POST['sendid'],version=4)
+                changes = bulk.objects.filter(submissionID = submissionID)
+                operationtype = "selected"
+                
+            except:
+                if not 'genrevert' in request.POST:
+                    Error = "Please select a valid submission ID"
+                    return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs,'error':Error}, prompt)
+                else:
+                    operationtype = "all"
+                    
+            #changes = bulk.objects.filter(submissionID = submissionID)
+            try:
+                orgID = request.POST['orgid']
+            except:
+                Error = "Please select a valid Org"
+                return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs,'error':Error}, prompt)
             NetID=0      
-            SearchList=[]
+           
             actions=[]
             
             if not (apikey=='' and orgID==''):
@@ -191,27 +209,6 @@ def bulkchange(request):
                 print_console=False
                 )
                 
-                
-                
-                net_name = []
-                net_id = []
-                new_net_id=[]
-                netcreation=[]
-                
-                my_nets = dashboard.networks.getOrganizationNetworks(orgID)
-                for net in my_nets:
-                    net_id.append(net["id"])
-                    net_name.append(net["name"])                     
-                for i in changes:
-                    if i.networkname in net_name:
-                        NetID = net_name.index(i.networkname) 
-                        SearchList.append(net_id[NetID])
-                    else:
-                        if 'validate' in request.GET:
-                            SearchList.append("Will be created")
-                            netcreation.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
-                        else:
-                            SearchList.append("Needs Creation")
                 devname = ''
                 devserial = ''
                 devnetworkID=''
@@ -221,11 +218,38 @@ def bulkchange(request):
                 invalidreq=[]
                 netcorrect = []
                 networkactions = []
-                my_nets = dashboard.networks.getOrganizationNetworks(orgID)  #called again to refresh the list with new networks                      
-                for net in my_nets:
-                    net_id.append(net["id"])
-                    net_name.append(net["name"]) 
-                if 'validate' in request.GET:
+                if 'validate' in request.POST:
+                    net_name = []
+                    net_id = []
+                    new_net_id=[]
+                    netcreation=[]
+                    
+                    my_nets = dashboard.networks.getOrganizationNetworks(orgID)
+                    for net in my_nets:
+                        net_id.append(net["id"])
+                        net_name.append(net["name"])                     
+                    for i in changes:
+                        if i.networkname in net_name:
+                            NetID = net_name.index(i.networkname) 
+                            
+                        else:                                                        
+                            netcreation.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
+                            
+                                
+                    devname = ''
+                    devserial = ''
+                    devnetworkID=''
+                    orgdevserials=[]
+                    orgdevnetwork=[]
+                    net_serial=[]
+                    invalidreq=[]
+                    netcorrect = []
+                    networkactions = []
+                    my_nets = dashboard.networks.getOrganizationNetworks(orgID)  #called again to refresh the list with new networks                      
+                    for net in my_nets:
+                        net_id.append(net["id"])
+                        net_name.append(net["name"]) 
+                if 'validate' in request.POST:
                     orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
                     for device in orgdevices:
                         orgdevserials.append(device["serial"])
@@ -277,8 +301,8 @@ def bulkchange(request):
                         dashboard.management_interface_settings.updateNetworkDeviceManagementInterfaceSettings(destID, devserial,wan1 = wan1)
                         dashboard.devices.updateNetworkDevice(destID, devserial, name = devname, tags = devtags, notes = devnotes)
                         
-                if 'genrevert' in request.GET:
-                    revertID = request.GET["revertname"]
+                if 'genrevert' in request.POST:
+                    revertID = request.POST["revertname"]
                     orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
                     for device in orgdevices:
                         orgdevserials.append(device["serial"])
@@ -293,9 +317,13 @@ def bulkchange(request):
                         submissionFname = revertID,
                         date = timezone.now()
                     )
-                   
+                    if operationtype == "all":
+                        changes = net_serial
                     for i in changes :
-                        devserial = i.serial
+                        if operationtype =="all":
+                            devserial = i
+                        else:
+                            devserial = i.serial
                         currentnetworkID = net_serial[devserial]
                         revertmanagement = (dashboard.management_interface_settings.getNetworkDeviceManagementInterfaceSettings(currentnetworkID, devserial)["wan1"])
                         revertproperties = dashboard.devices.getNetworkDevice(currentnetworkID, devserial)
@@ -343,7 +371,7 @@ def bulkchange(request):
                         
                         #https://pypi.org/project/django-encrypted-model-fields/
                         
-            return render(request, 'bulkchange.html', {'pull':changes,'search':SearchList,'netcr':netcorrect,'invalid':invalidreq,'bulk_name':substable,'orgs':orgs})
+            return render(request, 'bulkchange.html', {'pull':changes,'bulk_name':substable,'orgs':orgs})
 
 
                
