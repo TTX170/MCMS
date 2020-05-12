@@ -9,6 +9,16 @@ $(document).ready(function(){
 {% if error %}
 	<div class="alert alert-danger" role="alert">{{error}}</div>
 {%endif%}
+{% if messages %}
+{% for message in messages %}
+{%if message.level == DEFAULT_MESSAGE_LEVELS.ERROR%}
+	<div class="alert alert-danger" role="alert">{{message}}</div>
+{%endif%}
+{%if message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS%}
+	<div class="alert alert-success" role="alert">{{message}}</div>
+{%endif%}	
+{%endfor%}
+{%endif%}
 <h1 class="display-4">Bulk Config Change</h1>
 <hr class="my-4">
                                                                         

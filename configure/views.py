@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, reverse
 import meraki, os, io, csv
 from django.contrib import messages
 from .models import bulk, subtable, userprofile, vlan, mxport, switch
@@ -94,25 +94,26 @@ def home(request):
  
 def bulkchange(request):
     if request.user.is_authenticated:              
+        try: 
+            apikey = userprofile.objects.get(owner=request.user.id).apikey
+        except:
+            return redirect('profile')
         my_orgs = ''
         GetOrgList = ''
         table=[]      
         invalidreq=[]
         netcorrect = []
         subs = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "addDev") | Q(subtype = "backupDev"))
-        bulk_id=[]
-        bulk_name=[]
-        for i in subs:
-            bulk_id.append(i.id)
-            if i.subtype == "addDev":
-                bulk_name.append("%s-Import-%s"%(i.submissionFname,i.date))
-            else:
-                bulk_name.append("%s-Backup-%s"%(i.submissionFname,i.date))
-        substable = dict(zip(bulk_name,bulk_id))
-        try: 
-            apikey = userprofile.objects.get(owner=request.user.id).apikey
-        except:
-            return redirect('profile')
+        # bulk_id=[]
+        # bulk_name=[]
+        # for i in subs:
+            # bulk_id.append(i.id)
+            # if i.subtype == "addDev":
+                # bulk_name.append("%s-Import-%s"%(i.submissionFname,i.date))
+            # else:
+                # bulk_name.append("%s-Backup-%s"%(i.submissionFname,i.date))
+        substable = SubRefresh(request,filter)
+        
         if not apikey == '':
             dashboard = meraki.DashboardAPI(
             api_key = apikey,
@@ -186,8 +187,8 @@ def bulkchange(request):
                 
             except:
                 if not 'genrevert' in request.POST:
-                    Error = "Please select a valid submission ID"
-                    return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs,'error':Error}, prompt)
+                    messages.error(request, "Please select a valid submission ID")
+                    return redirect("bulkchange")
                 else:
                     operationtype = "all"
                     
@@ -195,8 +196,8 @@ def bulkchange(request):
             try:
                 orgID = request.POST['orgid']
             except:
-                Error = "Please select a valid Org"
-                return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs,'error':Error}, prompt)
+                messages.error(request,"Please select a valid Org")
+                return redirect("bulkchange")
             NetID=0      
            
             actions=[]
@@ -270,8 +271,8 @@ def bulkchange(request):
                         
                         
                         if not i.serial in orgdevserials:
-                            invalidreq.append("%s is not known in this organisation" % devserial)
-                            continue
+                           messages.error(request,"%s is not known in this organisation" % devserial)
+                           continue
                             
                         NetID = net_name.index(i.networkname)
                         destID = net_id[NetID]
@@ -385,14 +386,9 @@ def backup(request):
         except:
             return redirect('profile')
         
-        subs = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupOrg"))
-        sub_id=[]
-        sub_name=[]
-        nets={}
-        for i in subs:
-            sub_id.append(i.id)
-            sub_name.append("%s-Backup-%s"%(i.submissionFname,i.date))            
-        substable = dict(zip(sub_name,sub_id))        
+        filter = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupOrg"))
+              
+        substable = SubRefresh(request,filter)
         if not apikey == '':
             dashboard = meraki.DashboardAPI(
             api_key = apikey,
@@ -403,6 +399,7 @@ def backup(request):
             my_orgs = dashboard.organizations.getOrganizations()
             org_id = []
             org_name = []
+            nets = []
             for org in my_orgs:
                 org_id.append(org["id"])
                 org_name.append(org["name"])
@@ -410,6 +407,9 @@ def backup(request):
             #orgoID = request.GET['orgoid'] 
             if ('refresh' in request.POST):
                 orgoID = request.POST['orgoid']
+                if not orgoID in org_id: 
+                    messages.error(request,"Error: Refresh requires and org to be selected")
+                    return redirect(reverse("backup"))
                 my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
                 net_id = []
                 net_name = []
@@ -463,7 +463,7 @@ def backup(request):
                                     rstp = ports['rstpEnabled'],
                                     )
                     except:
-                        print("beep")
+                        messages.error(request,"Unable to backup %s, No valid switches" %i)
                     try:
                         vlans = dashboard.vlans.getNetworkVlans(j)                    
                         for netvlan in vlans:
@@ -480,7 +480,7 @@ def backup(request):
                                 dhcprelayservers = relayserver,
                                 )
                     except:
-                        print("beep")
+                         messages.error(request,"Unable to backup %s, No valid vlans" %i)
                     try:    
                         mxports = dashboard.mx_vlan_ports.getNetworkAppliancePorts(j)
                         for ports in mxports:
@@ -501,8 +501,9 @@ def backup(request):
                                 allowedvlans = avlan,
                             )
                     except:
-                        print("beep")
-                return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})   
+                         messages.error(request,"Unable to backup %s, No valid Mxports" %i)
+                messages.success(request,"Backup Complete")         
+                return redirect(reverse('backup'))   
                             
             if ('preview' in request.POST):
                 try:
@@ -511,14 +512,14 @@ def backup(request):
                     for i in dashboard.networks.getOrganizationNetworks(orgoID):
                         netlist.append(i["name"])
                 except:
-                    Error = "Please Select a Valid Organisation"
-                    return render(request, 'backup.html', {'orgs':orgs,'error':Error})
+                    messages.error(request,"Please Select a Valid Organisation")
+                    return redirect(reverse("backup"))
                 try:
                     previewID=uuid.UUID(request.POST['backupid'],version=4)
                 except ValueError:
-                    return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})
-                print (request.POST["netid"])
-                print ("beep")
+                    messages.error(request,"Please Select a Valid Submission")
+                    return redirect(reverse("backup"))
+               
                 if request.POST["netid"] == "All":
                     previewswitch = switch.objects.filter(submissionID = previewID)
                     previewvlan = vlan.objects.filter(submissionID = previewID)
@@ -529,17 +530,23 @@ def backup(request):
                     previewvlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
                     previewmxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
                 else:
-                    Error = "No matching networks found"
-                    return render(request, 'backup.html', {'orgs':orgs,'error':Error,'backups':substable})
+                    messages.error(request,"No matching networks found")
+                    return redirect(reverse("backup"))
                 return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'switch':previewswitch,'vlans':previewvlan,'mxports':previewmxports})
             
             if ('restore' in request.POST):
                 try:
                     previewID=uuid.UUID(request.POST['backupid'],version=4)
                 except ValueError:
-                    return render(request, 'backup.html', {'orgs':orgs, 'backups':substable})
-                orgoID = request.POST['orgoid']
-                netlist=[]
+                    messages.error(request,"Please Select a valid backup")
+                    return redirect(reverse("backup"))
+                try:
+                    orgoID = request.POST['orgoid']
+                    netlist=[]
+                   
+                except:
+                    messages.error(request,"Please Select a Valid Organisation")
+                    return redirect(reverse("backup"))
                 
                 for i in dashboard.networks.getOrganizationNetworks(orgoID):
                     netlist.append(i["name"])
@@ -552,7 +559,8 @@ def backup(request):
                     restorevlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
                     restoremxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
                 else:
-                    print("error")
+                    messages.error(request,"No matching networks found, please select all at minimum")
+                    return redirect(reverse("backup"))
                 net_id=[]
                 net_name=[]
                 my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
@@ -634,7 +642,8 @@ def backup(request):
                                 dashboard.updateNetworkVlan(restorenetID, j.vlan,
                                 dhcpHandling = j.dhcpstatus,                                
                                 )
-                                
+                messages.success(request,"Restore Complete")
+                return redirect(reverse("backup"))
                             
       
                         
@@ -651,6 +660,10 @@ def profile(request):
             key = ''
             
             message = "Please Enter your API into the box"
+        filter = subtable.objects.filter(owner=request.user.id)  
+        substable = SubRefresh(request,filter)
+      
+            
         if 'key' in request.POST and not request.POST['key']=='':
             try:
                 newkey = request.POST['key']
@@ -668,7 +681,42 @@ def profile(request):
             userprofile.objects.update(apikey = newkey)
             key = userprofile.objects.get(owner=request.user.id).apikey
             message = "Key has been update successfuly"
-        return render(request, 'profile.html',{'message':message, 'currentkey':key})
+        elif 'key' in request.POST:
+            message = "Key length cannot be blank"
+            return render(request, 'profile.html',{'message':message})
+        #return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})
+       
+        if 'Delete' in request.POST:            
+            try:
+                DelID=uuid.UUID(request.POST['subid'],version=4)
+                subtable.objects.get(id = DelID).delete()
+                messages.success(request,"Success")
+                filter = subtable.objects.filter(owner=request.user.id)  
+                substable = SubRefresh(request,filter)
+                return redirect(reverse("profile"))
+            except ValueError:
+                messages.error(request,"Please Select A valid submission")
+                return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})    
+        return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})
     else:
         return redirect('/')
     
+def SubRefresh(request,filter):
+    try:
+       
+        sub_id=[]
+        sub_name=[]
+        for i in filter:
+            sub_id.append(i.id)
+            if i.subtype == "addDev":
+                sub_name.append("%s-ImportedDevices-%s"%(i.submissionFname,i.date))
+            elif i.subtype == "backupORG":
+                sub_name.append("%s-BackedUpOrganisation-%s"%(i.submissionFname,i.date))
+            else:
+                sub_name.append("%s-BackedUpDevices-%s"%(i.submissionFname,i.date))
+        substable = dict(zip(sub_name,sub_id))        
+        return (substable)
+    except:
+        substable = None
+        return (substable)   
+        

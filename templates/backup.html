@@ -1,12 +1,24 @@
 {% extends 'base.html' %}
 {% block content %}
-$(function () {
-  $('[data-toggle="popover"]').popover()
-})
+<script>
+$(document).ready(function(){
+  $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
 <div class="jumbotron">
  {% if error %}
 		<div class="alert alert-danger" role="alert">{{error}}</div>
 	 {%endif%}
+{% if messages %}
+{% for message in messages %}
+{%if message.level == DEFAULT_MESSAGE_LEVELS.ERROR%}
+	<div class="alert alert-danger" role="alert">{{message}}</div>
+{%endif%}
+{%if message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS%}
+	<div class="alert alert-success" role="alert">{{message}}</div>
+{%endif%}	
+{%endfor%}
+{%endif%}	 
  <h1 class="display-4">Backup/Restore</h1>
 
 <p class="lead">Please Select the organisation and network you wish to backup or restore <p>
@@ -31,11 +43,11 @@ $(function () {
 		<option>{{i}}</option>
 		{%endfor%}
 	</select>
-	<button type="submit" name="refresh" class="btn btn-primary">Refresh Networks</button>
+	<button type="submit" name="refresh" class="btn btn-primary"data-toggle="tooltip" data-placement="bottom" title="Requires Org to be selected">Refresh Networks</button>
 	<input type="text" name="backupname" placeholder="Name of Backup Here">
-	<button type="submit" name="backup" class="btn btn-primary">Backup Changes</button>
-	<button type="submit" name="preview" class="btn btn-primary">Preview Restore</button>
-	<button type="submit" name="restore" class="btn btn-danger">Restore</button>
+	<button type="submit" name="backup" class="btn btn-primary"data-toggle="tooltip" data-placement="bottom" title="Requires Org and backup name">Backup Changes</button>
+	<button type="submit" name="preview" class="btn btn-primary"data-toggle="tooltip" data-placement="bottom" title="Requires Backup, Org and network to be selected">Preview Restore</button>
+	<button type="submit" name="restore" class="btn btn-danger"data-toggle="tooltip" data-placement="bottom" title="Requires Backup, Org and network to be selected">Restore</button>
 	{% csrf_token %}
   </form>
   </div>
