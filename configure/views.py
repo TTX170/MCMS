@@ -103,7 +103,7 @@ def bulkchange(request):
         table=[]      
         invalidreq=[]
         netcorrect = []
-        subs = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "addDev") | Q(subtype = "backupDev"))
+        filter = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "addDev") | Q(subtype = "backupDev"))
         # bulk_id=[]
         # bulk_name=[]
         # for i in subs:
@@ -129,11 +129,11 @@ def bulkchange(request):
                 org_name.append(org["name"])
             orgs = dict(zip(org_name,org_id))                  
             #return render(request, 'bulkchange.html',{'table':table,'bulk_name':bulk_name})
-        data = bulk.objects.all()
-        prompt = {
-            'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.Please note your submission id is auto generated from the csv name',
-            'profiles': data
-            }
+        #data = bulk.objects.all()
+        #prompt = {
+         #   'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.Please note your submission id is auto generated from the csv name',
+          #  'profiles': data
+           # }
                        
         if 'csvfile' in request.FILES:
             csv_file = request.FILES['csvfile']
@@ -171,8 +171,9 @@ def bulkchange(request):
                     submissionID = (subtable.objects.get(id=subid)),
                 ) 
                    
-            context = {}
-            return render(request,'bulkchange.html', context ,{'bulk_name':bulk_name,})
+            #context = {}
+            messages.success(request,"Import Successful")
+            return redirect("bulkchange") 
         if ('preview' in request.POST) or ('validate' in request.POST) or ('genrevert' in request.POST):
             # try:
                 # orgID = request.GET['orgid']
@@ -219,7 +220,7 @@ def bulkchange(request):
                 invalidreq=[]
                 netcorrect = []
                 networkactions = []
-                if 'validate' in request.POST:
+                if 'Preview' in request.POST:
                     net_name = []
                     net_id = []
                     new_net_id=[]
@@ -233,9 +234,11 @@ def bulkchange(request):
                         if i.networkname in net_name:
                             NetID = net_name.index(i.networkname) 
                             
-                        else:                                                        
-                            netcreation.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
-                            
+                        else:
+                            if 'validate' in request.POST:
+                                netcreation.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
+                            else:
+                                message.info(request,"%s will be created"%i.networkname)
                                 
                     devname = ''
                     devserial = ''
@@ -283,11 +286,11 @@ def bulkchange(request):
                             netcorrect.append("True")
                             #continue # all is fine
                         elif currentnetworkID == None:
-                            netcorrect.append("blank")
+                            
                             #addactions.append("dashboard.devices.claimNetworkDevices(destID, devserial)")
                             dashboard.devices.claimNetworkDevices(destID, serial = devserial)
                         else: 
-                            netcorrect.append("wrong")
+                            
                             dashboard.devices.removeNetworkDevice(currentnetworkID, devserial)
                             dashboard.devices.claimNetworkDevices(destID, serial = devserial)
                         if devip == '' and devvlan == '':
@@ -301,7 +304,8 @@ def bulkchange(request):
                             
                         dashboard.management_interface_settings.updateNetworkDeviceManagementInterfaceSettings(destID, devserial,wan1 = wan1)
                         dashboard.devices.updateNetworkDevice(destID, devserial, name = devname, tags = devtags, notes = devnotes)
-                        
+                        messages.success(request,"Change Complete")
+                        return redirect("bulkchange")
                 if 'genrevert' in request.POST:
                     revertID = request.POST["revertname"]
                     orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
@@ -369,14 +373,15 @@ def bulkchange(request):
                             nettags = revnettags,
                             submissionID = (subtable.objects.get(id=subid))  
                         )
-                        
+                        messages.success(request,"Backup Created")
+                        return redirect("bulkchange")
                         #https://pypi.org/project/django-encrypted-model-fields/
                         
             return render(request, 'bulkchange.html', {'pull':changes,'bulk_name':substable,'orgs':orgs})
 
 
                
-        return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs}, prompt)      
+        return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs})      
     else:
         return redirect('/')
 def backup(request):
@@ -508,9 +513,13 @@ def backup(request):
             if ('preview' in request.POST):
                 try:
                     orgoID = request.POST['orgoid']
-                    netlist=[]
-                    for i in dashboard.networks.getOrganizationNetworks(orgoID):
-                        netlist.append(i["name"])
+                    my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
+                    net_id = []
+                    net_name = []
+                    for net in my_nets:
+                        net_id.append(net["id"])
+                        net_name.append(net["name"])
+                    nets = dict(zip(net_name,net_id)) 
                 except:
                     messages.error(request,"Please Select a Valid Organisation")
                     return redirect(reverse("backup"))
@@ -524,7 +533,7 @@ def backup(request):
                     previewswitch = switch.objects.filter(submissionID = previewID)
                     previewvlan = vlan.objects.filter(submissionID = previewID)
                     previewmxports = mxport.objects.filter(submissionID = previewID)
-                elif request.POST["netid"] in netlist:
+                elif request.POST["netid"] in net_name:
                     previewnet = request.POST["netid"]
                     previewswitch = switch.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
                     previewvlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
@@ -532,7 +541,7 @@ def backup(request):
                 else:
                     messages.error(request,"No matching networks found")
                     return redirect(reverse("backup"))
-                return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'switch':previewswitch,'vlans':previewvlan,'mxports':previewmxports})
+                return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'switch':previewswitch,'vlans':previewvlan,'mxports':previewmxports,'nets':nets})
             
             if ('restore' in request.POST):
                 try:
@@ -680,10 +689,11 @@ def profile(request):
             userprofile.objects.get_or_create(owner=request.user) 
             userprofile.objects.update(apikey = newkey)
             key = userprofile.objects.get(owner=request.user.id).apikey
-            message = "Key has been update successfuly"
+            messages.success(request,"Key has been update successfuly")
+            return redirect("profile")
         elif 'key' in request.POST:
-            message = "Key length cannot be blank"
-            return render(request, 'profile.html',{'message':message})
+            messages.error(request,"Key length cannot be blank")
+            return redirect("profile")
         #return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})
        
         if 'Delete' in request.POST:            
@@ -696,7 +706,7 @@ def profile(request):
                 return redirect(reverse("profile"))
             except ValueError:
                 messages.error(request,"Please Select A valid submission")
-                return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})    
+                return redirect("profile")   
         return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})
     else:
         return redirect('/')

@@ -17,30 +17,34 @@ $(document).ready(function(){
 {%if message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS%}
 	<div class="alert alert-success" role="alert">{{message}}</div>
 {%endif%}	
+{%if message.level == DEFAULT_MESSAGE_LEVELS.INFO%}
+	<div class="alert alert-info" role="alert">{{message}}</div>
+{%endif%}
 {%endfor%}
 {%endif%}
 <h1 class="display-4">Bulk Config Change</h1>
 <hr class="my-4">
                                                                         
- {% if messages %}
-        {% for message in messages %}
-            <div>
-                <strong>{{message|safe}}</strong>
-            </div>
-        {% endfor %}
-    {% else %}
-    {{order}}
+
+    <p class="lead">The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.Please note your submission id is auto generated from the csv name</p>
     <form action="" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
-        <label for="file1"> Upload a file</label>
-        <input type="file" id="file1" name="csvfile">
-        <small>Only accepts CSV files</small>
-        <button type="submit">Upload</button>
+		<div class="custom-file">
+        <label class="custom-file-label d-inline" for="file1"> Upload a file</label>
+        <input type="file" class="custom-file-input d-inline" id="file1" name="csvfile">
+		</div>
+        <p class="lead d-inline">Only accepts CSV files</p>
+        <button class="btn btn-primary" type="submit">Upload</button>
+		<script>
+		
+		$(".custom-file-input").on("change", function() {
+		  var fileName = $(this).val().split("\\").pop();
+		  $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+		});
+		</script>
     </form>
-    {% endif %}
-    {% for profile in profiles %}
-    {{profile.name}}
-    {% endfor %}
+    
+  
 	  <div>
  <hr class="my-4"> 
   <form method="post">
@@ -58,9 +62,9 @@ $(document).ready(function(){
 	</select>
 	<input type="text" name="revertname" placeholder="Name of Backup Here">
 	<button type="submit" name="preview" class="btn btn-primary">Preview Changes</button>
-	<button type="submit" name="validate" class="btn btn-primary">Validate Changes</button>
-	<button type="submit" name="Commit" class="btn btn-danger">Commit Changes</button>
-	<button type="submit" name="genrevert" class="btn btn-danger" data-toggle="tooltip" data-placement="bottom" title="If no import is select a full org backup will take place">BackupDevices</button>
+	<button type="submit" name="validate" class="btn btn-danger"data-toggle="tooltip" data-placement="bottom" title="Requires Org and import selected">Push Changes</button>
+	
+	<button type="submit" name="genrevert" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="If no import is select a full org backup will take place">BackupDevices</button>
 	{%csrf_token%}
   </form>
   </div>
