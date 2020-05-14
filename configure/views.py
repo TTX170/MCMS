@@ -93,136 +93,108 @@ def home(request):
         return redirect('/')
  
 def bulkchange(request):
-    if request.user.is_authenticated:              
-        try: 
-            apikey = userprofile.objects.get(owner=request.user.id).apikey
-        except:
-            return redirect('profile')
-        my_orgs = ''
-        GetOrgList = ''
-        table=[]      
-        invalidreq=[]
-        netcorrect = []
-        filter = subtable.objects.filter(Q(owner = request.user.id) & (Q(subtype = "addDev") | Q(subtype = "backupDev")))
-
-        substable = SubRefresh(request,filter)
-        
-        if not apikey == '':
-            dashboard = meraki.DashboardAPI(
-            api_key = apikey,
-            base_url='https://api-mp.meraki.com/api/v0/',
-            log_file_prefix=os.path.basename(__file__)[:-3],
-            print_console=False
-            )
-            my_orgs = dashboard.organizations.getOrganizations()
-            org_id = []
-            org_name = []
-            for org in my_orgs:
-                org_id.append(org["id"])
-                org_name.append(org["name"])
-            orgs = dict(zip(org_name,org_id))                  
-       
-                       
-        if 'csvfile' in request.FILES:
-            csv_file = request.FILES['csvfile']
-            importname = os.path.splitext(csv_file.name)[0]
-            subid = uuid.uuid4()
-            subtable.objects.update_or_create( 
-                id = subid,
-                owner = request.user,
-                subtype = "addDev",
-                submissionFname = importname,
-                date = timezone.now()
-            )
-                    
-            
-            if not csv_file.name.endswith('.csv'):
-                messages.error(request, 'THIS IS NOT A CSV FILE')
-            data_set = csv_file.read().decode('UTF-8')
-            io_string = io.StringIO(data_set)
-            next(io_string)
-            for column in csv.reader(io_string, delimiter=',', quotechar="|"):
-                created = bulk.objects.update_or_create(
-                    serial = column[0],
-                    networkname = column[1],
-                    name = column[2],
-                    tags = column[3],
-                    notes = column[4],
-                    address = column[5],
-                    ip = column[6],
-                    gw = column[7],
-                    mask = column[8],
-                    dns1 = column[9],
-                    dns2 = column[10],
-                    vlan = column[11],
-                    nettags = column[12],
-                    submissionID = (subtable.objects.get(id=subid)),
-                ) 
-                   
-           
-            messages.success(request,"Import Successful")
-            return redirect("bulkchange") 
-        if ('preview' in request.POST) or ('validate' in request.POST) or ('genrevert' in request.POST):
-
-                
-            try:
-                submissionID=uuid.UUID(request.POST['sendid'],version=4)
-                changes = bulk.objects.filter(submissionID = submissionID)
-                operationtype = "selected"
-                
+    if request.user.is_authenticated:
+        try:
+            try: 
+                apikey = userprofile.objects.get(owner=request.user.id).apikey
             except:
-                if not 'genrevert' in request.POST:
-                    messages.error(request, "Please select a valid submission ID")
-                    return redirect("bulkchange")
-                else:
-                    operationtype = "all"
-                    
-            try:
-                orgID = request.POST['orgid']
-            except:
-                messages.error(request,"Please select a valid Org")
-                return redirect("bulkchange")
-            NetID=0      
-           
-            actions=[]
+                return redirect('profile')
+            my_orgs = ''
+            GetOrgList = ''
+            table=[]      
+            invalidreq=[]
+            netcorrect = []
+            filter = subtable.objects.filter(Q(owner = request.user.id) & (Q(subtype = "addDev") | Q(subtype = "backupDev")))
+
+            substable = SubRefresh(request,filter)
             
-            if not (apikey=='' and orgID==''):
+            if not apikey == '':
                 dashboard = meraki.DashboardAPI(
                 api_key = apikey,
                 base_url='https://api-mp.meraki.com/api/v0/',
                 log_file_prefix=os.path.basename(__file__)[:-3],
                 print_console=False
                 )
+                my_orgs = dashboard.organizations.getOrganizations()
+                org_id = []
+                org_name = []
+                for org in my_orgs:
+                    org_id.append(org["id"])
+                    org_name.append(org["name"])
+                orgs = dict(zip(org_name,org_id))                  
+           
+                           
+            if 'csvfile' in request.FILES:
+                csv_file = request.FILES['csvfile']
+                importname = os.path.splitext(csv_file.name)[0]
+                subid = uuid.uuid4()
+                subtable.objects.update_or_create( 
+                    id = subid,
+                    owner = request.user,
+                    subtype = "addDev",
+                    submissionFname = importname,
+                    date = timezone.now()
+                )
+                        
                 
-                devname = ''
-                devserial = ''
-                devnetworkID=''
-                orgdevserials=[]
-                orgdevnetwork=[]
-                net_serial=[]
-                invalidreq=[]
-                netcorrect = []
-                networkactions = []
-                if ('Preview' in request.POST) or ('validate' in request.POST):
-                    net_name = []
-                    net_id = []
-                    new_net_id=[]
-                    netcreation=[]
+                if not csv_file.name.endswith('.csv'):
+                    messages.error(request, 'THIS IS NOT A CSV FILE')
+                data_set = csv_file.read().decode('UTF-8')
+                io_string = io.StringIO(data_set)
+                next(io_string)
+                for column in csv.reader(io_string, delimiter=',', quotechar="|"):
+                    created = bulk.objects.update_or_create(
+                        serial = column[0],
+                        networkname = column[1],
+                        name = column[2],
+                        tags = column[3],
+                        notes = column[4],
+                        address = column[5],
+                        ip = column[6],
+                        gw = column[7],
+                        mask = column[8],
+                        dns1 = column[9],
+                        dns2 = column[10],
+                        vlan = column[11],
+                        nettags = column[12],
+                        submissionID = (subtable.objects.get(id=subid)),
+                    ) 
+                       
+               
+                messages.success(request,"Import Successful")
+                return redirect("bulkchange") 
+            if ('preview' in request.POST) or ('validate' in request.POST) or ('genrevert' in request.POST):
+
                     
-                    my_nets = dashboard.networks.getOrganizationNetworks(orgID)
-                    for net in my_nets:
-                        net_id.append(net["id"])
-                        net_name.append(net["name"])                     
-                    for i in changes:
-                        if i.networkname in net_name:
-                            NetID = net_name.index(i.networkname) 
-                            
-                        else:
-                            if 'validate' in request.POST:
-                                netcreation.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
-                            else:
-                                message.info(request,"%s will be created"%i.networkname)
-                                
+                try:
+                    submissionID=uuid.UUID(request.POST['sendid'],version=4)
+                    changes = bulk.objects.filter(submissionID = submissionID)
+                    operationtype = "selected"
+                    
+                except:
+                    if not 'genrevert' in request.POST:
+                        messages.error(request, "Please select a valid submission ID")
+                        return redirect("bulkchange")
+                    else:
+                        operationtype = "all"
+                        
+                try:
+                    orgID = request.POST['orgid']
+                except:
+                    messages.error(request,"Please select a valid Org")
+                    return redirect("bulkchange")
+                NetID=0      
+               
+                actions=[]
+                
+                if not (apikey=='' and orgID==''):
+                    dashboard = meraki.DashboardAPI(
+                    api_key = apikey,
+                    base_url='https://api-mp.meraki.com/api/v0/',
+                    log_file_prefix=os.path.basename(__file__)[:-3],
+                    print_console=False
+                    )
+                    
                     devname = ''
                     devserial = ''
                     devnetworkID=''
@@ -232,290 +204,218 @@ def bulkchange(request):
                     invalidreq=[]
                     netcorrect = []
                     networkactions = []
-                    my_nets = dashboard.networks.getOrganizationNetworks(orgID)  #called again to refresh the list with new networks                      
-                    for net in my_nets:
-                        net_id.append(net["id"])
-                        net_name.append(net["name"]) 
-                if 'validate' in request.POST:
-                    orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
-                    for device in orgdevices:
-                        orgdevserials.append(device["serial"])
-                        orgdevnetwork.append(device["networkId"])
-                    net_serial = dict(zip(orgdevserials,orgdevnetwork))
-                 
-                    for i in changes:
-                        devname = i.name
-                        devserial = i.serial
-                        devtags = i.tags
-                        devnotes = i.notes
-                        devaddress = i.address
-                        devip = i.ip
-                        devgw = i.gw
-                        devmask = i.mask
-                        devdns = [i.dns1, i.dns2]
-                        devvlan = i.vlan
-                        print(i.serial)
+                    if ('Preview' in request.POST) or ('validate' in request.POST):
+                        net_name = []
+                        net_id = []
+                        new_net_id=[]
+                        netcreation=[]
                         
-                        
-                        if not i.serial in orgdevserials:
-                           messages.error(request,"%s is not known in this organisation" % devserial)
-                           
-                           continue
-                            
-                        NetID = net_name.index(i.networkname)
-                        destID = net_id[NetID]
-                      
-                        currentnetworkID = net_serial[devserial]
-                        netcorrect.append(currentnetworkID)
-                        if currentnetworkID == destID:
-                            netcorrect.append("True")
-                            #continue # all is fine
-                        elif currentnetworkID == None:
-                            
-                            #addactions.append("dashboard.devices.claimNetworkDevices(destID, devserial)")
-                            dashboard.devices.claimNetworkDevices(destID, serial = devserial)
-                        else: 
-                            
-                            dashboard.devices.removeNetworkDevice(currentnetworkID, devserial)
-                            dashboard.devices.claimNetworkDevices(destID, serial = devserial)
-                        if devip == '' and devvlan == '':
-                            continue
-                        elif devip == "del":
-                            wan1 = {"wanEnabled" : "not configured", "usingstaticip" : False}
-                        elif devip == '':
-                            wan1 = {"wanEnabled" : "not configured", "usingstaticip" : False, "vlan" : devvlan}
-                        else :
-                            wan1 = {"wanEnabled" : "not configured", "usingstaticip" : True, "staticIp" : devip, "staticGatewayIp" : devgw, "staticSubnetMask" : devmask, "staticDns" : devdns, "vlan" : devvlan}
-                            
-                        dashboard.management_interface_settings.updateNetworkDeviceManagementInterfaceSettings(destID, devserial,wan1 = wan1)
-                        dashboard.devices.updateNetworkDevice(destID, devserial, name = devname, tags = devtags, notes = devnotes)
-                    messages.success(request,"Change Complete")
-                    return redirect("bulkchange")
-                if 'genrevert' in request.POST:
-                    revertID = request.POST["revertname"]
-                    try:
+                        my_nets = dashboard.networks.getOrganizationNetworks(orgID)
+                        for net in my_nets:
+                            net_id.append(net["id"])
+                            net_name.append(net["name"])                     
+                        for i in changes:
+                            if i.networkname in net_name:
+                                NetID = net_name.index(i.networkname) 
+                                
+                            else:
+                                if 'validate' in request.POST:
+                                    netcreation.append(dashboard.networks.createOrganizationNetwork(orgID,i.networkname,"wireless switch appliance",tags=i.nettags)["id"])
+                                else:
+                                    message.info(request,"%s will be created"%i.networkname)
+                                    
+                        devname = ''
+                        devserial = ''
+                        devnetworkID=''
+                        orgdevserials=[]
+                        orgdevnetwork=[]
+                        net_serial=[]
+                        invalidreq=[]
+                        netcorrect = []
+                        networkactions = []
+                        my_nets = dashboard.networks.getOrganizationNetworks(orgID)  #called again to refresh the list with new networks                      
+                        for net in my_nets:
+                            net_id.append(net["id"])
+                            net_name.append(net["name"]) 
+                    if 'validate' in request.POST:
                         orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
-                    except:
-                        messages.error(request,"Please Select a valid organisation")
-                        return redirect("bulkchange")
-                    for device in orgdevices:
-                        orgdevserials.append(device["serial"])
-                        orgdevnetwork.append(device["networkId"])
-                       
-                    net_serial = dict(zip(orgdevserials,orgdevnetwork))
-                    subid = uuid.uuid4()
-                    subtable.objects.update_or_create( 
-                        id = subid,
-                        owner = request.user,
-                        subtype = "backupDev",
-                        submissionFname = revertID,
-                        date = timezone.now()
-                    )
-                    if operationtype == "all":
-                        
-                        changes = []
-                        changes = orgdevserials
-                        
-                    for i in changes :
-                        if operationtype =="all":
-                            devserial = i
-                            
-                        else:
+                        for device in orgdevices:
+                            orgdevserials.append(device["serial"])
+                            orgdevnetwork.append(device["networkId"])
+                        net_serial = dict(zip(orgdevserials,orgdevnetwork))
+                     
+                        for i in changes:
+                            devname = i.name
                             devserial = i.serial
-                        try:
+                            devtags = i.tags
+                            devnotes = i.notes
+                            devaddress = i.address
+                            devip = i.ip
+                            devgw = i.gw
+                            devmask = i.mask
+                            devdns = [i.dns1, i.dns2]
+                            devvlan = i.vlan
+                            print(i.serial)
+                            
+                            
+                            if not i.serial in orgdevserials:
+                               messages.error(request,"%s is not known in this organisation" % devserial)
+                               
+                               continue
+                                
+                            NetID = net_name.index(i.networkname)
+                            destID = net_id[NetID]
+                          
                             currentnetworkID = net_serial[devserial]
+                            netcorrect.append(currentnetworkID)
+                            if currentnetworkID == destID:
+                                netcorrect.append("True")
+                                #continue # all is fine
+                            elif currentnetworkID == None:
+                                
+                                #addactions.append("dashboard.devices.claimNetworkDevices(destID, devserial)")
+                                dashboard.devices.claimNetworkDevices(destID, serial = devserial)
+                            else: 
+                                
+                                dashboard.devices.removeNetworkDevice(currentnetworkID, devserial)
+                                dashboard.devices.claimNetworkDevices(destID, serial = devserial)
+                            if devip == '' and devvlan == '':
+                                continue
+                            elif devip == "del":
+                                wan1 = {"wanEnabled" : "not configured", "usingstaticip" : False}
+                            elif devip == '':
+                                wan1 = {"wanEnabled" : "not configured", "usingstaticip" : False, "vlan" : devvlan}
+                            else :
+                                wan1 = {"wanEnabled" : "not configured", "usingstaticip" : True, "staticIp" : devip, "staticGatewayIp" : devgw, "staticSubnetMask" : devmask, "staticDns" : devdns, "vlan" : devvlan}
+                                
+                            dashboard.management_interface_settings.updateNetworkDeviceManagementInterfaceSettings(destID, devserial,wan1 = wan1)
+                            dashboard.devices.updateNetworkDevice(destID, devserial, name = devname, tags = devtags, notes = devnotes)
+                        messages.success(request,"Change Complete")
+                        return redirect("bulkchange")
+                    if 'genrevert' in request.POST:
+                        revertID = request.POST["revertname"]
+                        try:
+                            orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
                         except:
-                            messages.error(request, "%s is not a valid serial number in this organisation" %devserial)
-                            continue
-                        revertmanagement = (dashboard.management_interface_settings.getNetworkDeviceManagementInterfaceSettings(currentnetworkID, devserial)["wan1"])
-                        revertproperties = dashboard.devices.getNetworkDevice(currentnetworkID, devserial)
-                        networksets = dashboard.networks.getNetwork(currentnetworkID)
-                        if "name" in revertproperties : revname = revertproperties["name"] 
-                        else :revname = None
-                        if "tags" in revertproperties : revtags = revertproperties["tags"] 
-                        else :revtags = None
-                        if "notes" in revertproperties : revnotes = revertproperties["notes"] 
-                        else :revnotes = None
-                        if "address" in revertproperties : revaddr = revertproperties["address"] 
-                        else :revaddr = None
-                        if "staticIp" in revertmanagement : 
-                            revip = revertmanagement["staticIp"]
-                            revgw = revertmanagement["staticGatewayIp"]
-                            revmask = revertmanagement["staticSubnetMask"]
-                            revdns1 = revertmanagement["staticDns"][0]
-                            revdns2 = revertmanagement["staticDns"][1]
-                        else :
-                            revip = None
-                            revgw = None
-                            revmask = None
-                            revdns1 = None
-                            revdns2 = None
-                        if "vlan" in revertmanagement : revvlan = revertmanagement["vlan"]
-                        else : revvlan = None
-                        if "tags" in networksets : revnettags = networksets["tags"]
-                        else :revnettags = None                                
-                        bulk.objects.update_or_create(
-                            serial = devserial,
-                            networkname = networksets["name"],
-                            name = revname,
-                            tags = revtags,
-                            notes = revnotes,
-                            address = revaddr,
-                            ip = revip,
-                            gw = revgw,
-                            mask = revmask,
-                            dns1 = revdns1,
-                            dns2 = revdns2,
-                            vlan = revvlan,
-                            nettags = revnettags,
-                            submissionID = (subtable.objects.get(id=subid))  
+                            messages.error(request,"Please Select a valid organisation")
+                            return redirect("bulkchange")
+                        for device in orgdevices:
+                            orgdevserials.append(device["serial"])
+                            orgdevnetwork.append(device["networkId"])
+                           
+                        net_serial = dict(zip(orgdevserials,orgdevnetwork))
+                        subid = uuid.uuid4()
+                        subtable.objects.update_or_create( 
+                            id = subid,
+                            owner = request.user,
+                            subtype = "backupDev",
+                            submissionFname = revertID,
+                            date = timezone.now()
                         )
-                    messages.success(request,"Backup Created")
-                    return redirect("bulkchange")
-                        #https://pypi.org/project/django-encrypted-model-fields/
+                        if operationtype == "all":
+                            
+                            changes = []
+                            changes = orgdevserials
+                            
+                        for i in changes :
+                            if operationtype =="all":
+                                devserial = i
+                                
+                            else:
+                                devserial = i.serial
+                            try:
+                                currentnetworkID = net_serial[devserial]
+                            except:
+                                messages.error(request, "%s is not a valid serial number in this organisation" %devserial)
+                                continue
+                            revertmanagement = (dashboard.management_interface_settings.getNetworkDeviceManagementInterfaceSettings(currentnetworkID, devserial)["wan1"])
+                            revertproperties = dashboard.devices.getNetworkDevice(currentnetworkID, devserial)
+                            networksets = dashboard.networks.getNetwork(currentnetworkID)
+                            if "name" in revertproperties : revname = revertproperties["name"] 
+                            else :revname = None
+                            if "tags" in revertproperties : revtags = revertproperties["tags"] 
+                            else :revtags = None
+                            if "notes" in revertproperties : revnotes = revertproperties["notes"] 
+                            else :revnotes = None
+                            if "address" in revertproperties : revaddr = revertproperties["address"] 
+                            else :revaddr = None
+                            if "staticIp" in revertmanagement : 
+                                revip = revertmanagement["staticIp"]
+                                revgw = revertmanagement["staticGatewayIp"]
+                                revmask = revertmanagement["staticSubnetMask"]
+                                revdns1 = revertmanagement["staticDns"][0]
+                                revdns2 = revertmanagement["staticDns"][1]
+                            else :
+                                revip = None
+                                revgw = None
+                                revmask = None
+                                revdns1 = None
+                                revdns2 = None
+                            if "vlan" in revertmanagement : revvlan = revertmanagement["vlan"]
+                            else : revvlan = None
+                            if "tags" in networksets : revnettags = networksets["tags"]
+                            else :revnettags = None                                
+                            bulk.objects.update_or_create(
+                                serial = devserial,
+                                networkname = networksets["name"],
+                                name = revname,
+                                tags = revtags,
+                                notes = revnotes,
+                                address = revaddr,
+                                ip = revip,
+                                gw = revgw,
+                                mask = revmask,
+                                dns1 = revdns1,
+                                dns2 = revdns2,
+                                vlan = revvlan,
+                                nettags = revnettags,
+                                submissionID = (subtable.objects.get(id=subid))  
+                            )
+                        messages.success(request,"Backup Created")
+                        return redirect("bulkchange")
+                            #https://pypi.org/project/django-encrypted-model-fields/
                         
-            return render(request, 'bulkchange.html', {'pull':changes,'bulk_name':substable,'orgs':orgs})
-
-
+                return render(request, 'bulkchange.html', {'pull':changes,'bulk_name':substable,'orgs':orgs})
+            return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs})     
+        except:
+            messages.error(request,"Something went wrong (Likely a meraki bad gateway) Please try again")
+            return redirect("bulkchange")
                
-        return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs})      
+              
     else:
         return redirect('/')
 def backup(request):
     if request.user.is_authenticated:  
-        try: 
-            apikey = userprofile.objects.get(owner=request.user.id).apikey
-        except:
-            return redirect('profile')
-        
-        filter = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupOrg"))
-              
-        substable = SubRefresh(request,filter)
-        if not apikey == '':
-            dashboard = meraki.DashboardAPI(
-            api_key = apikey,
-            base_url='https://api-mp.meraki.com/api/v0/',
-            log_file_prefix=os.path.basename(__file__)[:-3],
-            print_console=False
-            )
-            my_orgs = dashboard.organizations.getOrganizations()
-            org_id = []
-            org_name = []
-            nets = []
-            for org in my_orgs:
-                org_id.append(org["id"])
-                org_name.append(org["name"])
-            orgs = dict(zip(org_name,org_id))
+        try:
+            try: 
+                apikey = userprofile.objects.get(owner=request.user.id).apikey
+            except:
+                return redirect('profile')
             
-            if ('refresh' in request.POST):
-                orgoID = request.POST['orgoid']
-                if not orgoID in org_id: 
-                    messages.error(request,"Refresh requires an org to be selected")
-                    return redirect(reverse("backup"))
-                my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
-                net_id = []
-                net_name = []
-                for net in my_nets:
-                    net_id.append(net["id"])
-                    net_name.append(net["name"])
-                nets = dict(zip(net_name,net_id)) 
-            if ('backup' in request.POST):
-                orgoID = request.POST['orgoid']
-                #generating the submission
-                backupName = request.POST['backupname']
-                subid = uuid.uuid4()
-                subtable.objects.update_or_create( 
-                    id = subid,
-                    owner = request.user,
-                    subtype = "backupOrg",
-                    submissionFname = request.POST['backupname'],
-                    date = timezone.now()
+            filter = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "backupOrg"))
+                  
+            substable = SubRefresh(request,filter)
+            if not apikey == '':
+                dashboard = meraki.DashboardAPI(
+                api_key = apikey,
+                base_url='https://api-mp.meraki.com/api/v0/',
+                log_file_prefix=os.path.basename(__file__)[:-3],
+                print_console=False
                 )
-                #get the nets and the api calls to get the info we need
-                try:
-                    org_nets = dashboard.networks.getOrganizationNetworks(orgoID)
-                except:
-                    messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
-                    return redirect("backup")
-                net_id = []
-                net_name = []
-                for net in org_nets:
-                    if net['type'] == 'combined':
-                        net_id.append(net["id"])
-                        net_name.append(net["name"])
-                networks = dict(zip(net_name,net_id))
-                for i,j in networks.items():
-                    try:    
-                        devices = dashboard.devices.getNetworkDevices(j)
-                        switches=[]
-                        for MS in devices:
-                            if 'MS' in MS['model']:
-                                switches.append(MS['serial'])
-                        for serial in switches:
-                            netswitch = dashboard.switch_ports.getDeviceSwitchPorts(serial)
-                            for ports in netswitch:
-                                switch.objects.update_or_create(
-                                    submissionID = (subtable.objects.get(id=subid)), 
-                                    serial = serial,
-                                    netname = i,
-                                    number = ports['number'],
-                                    enabled = ports['enabled'],
-                                    portname = ports['name'],
-                                    porttype = ports['type'],
-                                    vlan = ports['vlan'],
-                                    voicevlan = ports['voiceVlan'],
-                                    poe = ports['poeEnabled'],
-                                    stp = ports['stpGuard'],
-                                    rstp = ports['rstpEnabled'],
-                                    )
-                    except:
-                        messages.error(request,"Unable to backup %s, No valid switches" %i)
-                    try:
-                        vlans = dashboard.vlans.getNetworkVlans(j)                    
-                        for netvlan in vlans:
-                            if 'dhcpServerIPs' in netvlan: relayserver = netvlan['dhcpServerIPs']
-                            else: relayserver = None
-                            vlan.objects.update_or_create(
-                                submissionID = (subtable.objects.get(id=subid)),
-                                netname = i,
-                                vlan = netvlan['id'],
-                                vlanname = netvlan['name'],
-                                mxip = netvlan['applianceIp'],
-                                subnet = netvlan['subnet'],
-                                dhcpstatus = netvlan['dhcpHandling'],
-                                dhcprelayservers = relayserver,
-                                )
-                    except:
-                         messages.error(request,"Unable to backup %s, No valid vlans" %i)
-                    try:    
-                        mxports = dashboard.mx_vlan_ports.getNetworkAppliancePorts(j)
-                        for ports in mxports:
-                            if 'vlan' in ports: mxvlan = ports['vlan']
-                            else: mxvlan = None
-                            if ports['type'] == 'access':
-                                avlan = 'N/A'
-                            else:
-                                avlan = ports['allowedVlans'] 
-                            mxport.objects.update_or_create(
-                                submissionID = (subtable.objects.get(id=subid)),
-                                netname = i,
-                                number = ports['number'],
-                                enabled = ports['enabled'],
-                                porttype = ports['type'],
-                                dropuntag = ports['dropUntaggedTraffic'],
-                                vlan = mxvlan,
-                                allowedvlans = avlan,
-                            )
-                    except Exception as e:
-                         messages.error(request,"Unable to backup %s, No valid Mxports"%i)
-                         print(e)
-                         
-                messages.success(request,"Backup Complete")         
-                return redirect(reverse('backup'))   
-                            
-            if ('preview' in request.POST):
-                try:
+                my_orgs = dashboard.organizations.getOrganizations()
+                org_id = []
+                org_name = []
+                nets = []
+                for org in my_orgs:
+                    org_id.append(org["id"])
+                    org_name.append(org["name"])
+                orgs = dict(zip(org_name,org_id))
+                
+                if ('refresh' in request.POST):
                     orgoID = request.POST['orgoid']
+                    if not orgoID in org_id: 
+                        messages.error(request,"Refresh requires an org to be selected")
+                        return redirect(reverse("backup"))
                     my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
                     net_id = []
                     net_name = []
@@ -523,202 +423,314 @@ def backup(request):
                         net_id.append(net["id"])
                         net_name.append(net["name"])
                     nets = dict(zip(net_name,net_id)) 
-                except:
-                    messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
-                    return redirect(reverse("backup"))
-                try:
-                    previewID=uuid.UUID(request.POST['backupid'],version=4)
-                except ValueError:
-                    messages.error(request,"Please Select a Valid Submission")
-                    return redirect(reverse("backup"))
-               
-                if request.POST["netid"] == "All":
-                    previewswitch = switch.objects.filter(submissionID = previewID)
-                    previewvlan = vlan.objects.filter(submissionID = previewID)
-                    previewmxports = mxport.objects.filter(submissionID = previewID)
-                elif request.POST["netid"] in net_name:
-                    previewnet = request.POST["netid"]
-                    previewswitch = switch.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
-                    previewvlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
-                    previewmxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
-                else:
-                    messages.error(request,"No matching networks found")
-                    return redirect(reverse("backup"))
-                return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'switch':previewswitch,'vlans':previewvlan,'mxports':previewmxports,'nets':nets})
-            
-            if ('restore' in request.POST):
-                try:
-                    previewID=uuid.UUID(request.POST['backupid'],version=4)
-                except ValueError:
-                    messages.error(request,"Please Select a valid backup")
-                    return redirect(reverse("backup"))
-                try:
+                if ('backup' in request.POST):
                     orgoID = request.POST['orgoid']
-                    netlist=[]
-                    for i in dashboard.networks.getOrganizationNetworks(orgoID):
-                        netlist.append(i["name"])
-                except:
-                    messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
-                    return redirect(reverse("backup"))
+                    #generating the submission
+                    backupName = request.POST['backupname']
+                    subid = uuid.uuid4()
+                    subtable.objects.update_or_create( 
+                        id = subid,
+                        owner = request.user,
+                        subtype = "backupOrg",
+                        submissionFname = request.POST['backupname'],
+                        date = timezone.now()
+                    )
+                    #get the nets and the api calls to get the info we need
+                    try:
+                        org_nets = dashboard.networks.getOrganizationNetworks(orgoID)
+                    except:
+                        messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
+                        return redirect("backup")
+                    net_id = []
+                    net_name = []
+                    for net in org_nets:
+                        if net['type'] == 'combined':
+                            net_id.append(net["id"])
+                            net_name.append(net["name"])
+                    networks = dict(zip(net_name,net_id))
+                    for i,j in networks.items():
+                        try:    
+                            devices = dashboard.devices.getNetworkDevices(j)
+                            switches=[]
+                            for MS in devices:
+                                if 'MS' in MS['model']:
+                                    switches.append(MS['serial'])
+                            for serial in switches:
+                                netswitch = dashboard.switch_ports.getDeviceSwitchPorts(serial)
+                                for ports in netswitch:
+                                    switch.objects.update_or_create(
+                                        submissionID = (subtable.objects.get(id=subid)), 
+                                        serial = serial,
+                                        netname = i,
+                                        number = ports['number'],
+                                        enabled = ports['enabled'],
+                                        portname = ports['name'],
+                                        porttype = ports['type'],
+                                        vlan = ports['vlan'],
+                                        voicevlan = ports['voiceVlan'],
+                                        poe = ports['poeEnabled'],
+                                        stp = ports['stpGuard'],
+                                        rstp = ports['rstpEnabled'],
+                                        )
+                        except:
+                            messages.error(request,"Unable to backup %s, No valid switches" %i)
+                        try:
+                            vlans = dashboard.vlans.getNetworkVlans(j)                    
+                            for netvlan in vlans:
+                                if 'dhcpServerIPs' in netvlan: relayserver = netvlan['dhcpServerIPs']
+                                else: relayserver = None
+                                vlan.objects.update_or_create(
+                                    submissionID = (subtable.objects.get(id=subid)),
+                                    netname = i,
+                                    vlan = netvlan['id'],
+                                    vlanname = netvlan['name'],
+                                    mxip = netvlan['applianceIp'],
+                                    subnet = netvlan['subnet'],
+                                    dhcpstatus = netvlan['dhcpHandling'],
+                                    dhcprelayservers = relayserver,
+                                    )
+                        except:
+                             messages.error(request,"Unable to backup %s, No valid vlans" %i)
+                        try:    
+                            mxports = dashboard.mx_vlan_ports.getNetworkAppliancePorts(j)
+                            for ports in mxports:
+                                if 'vlan' in ports: mxvlan = ports['vlan']
+                                else: mxvlan = None
+                                if ports['type'] == 'access':
+                                    avlan = 'N/A'
+                                else:
+                                    avlan = ports['allowedVlans'] 
+                                mxport.objects.update_or_create(
+                                    submissionID = (subtable.objects.get(id=subid)),
+                                    netname = i,
+                                    number = ports['number'],
+                                    enabled = ports['enabled'],
+                                    porttype = ports['type'],
+                                    dropuntag = ports['dropUntaggedTraffic'],
+                                    vlan = mxvlan,
+                                    allowedvlans = avlan,
+                                )
+                        except Exception as e:
+                             messages.error(request,"Unable to backup %s, No valid Mxports"%i)
+                             print(e)
+                             
+                    messages.success(request,"Backup Complete")         
+                    return redirect(reverse('backup'))   
+                                
+                if ('preview' in request.POST):
+                    try:
+                        orgoID = request.POST['orgoid']
+                        my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
+                        net_id = []
+                        net_name = []
+                        for net in my_nets:
+                            net_id.append(net["id"])
+                            net_name.append(net["name"])
+                        nets = dict(zip(net_name,net_id)) 
+                    except:
+                        messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
+                        return redirect(reverse("backup"))
+                    try:
+                        previewID=uuid.UUID(request.POST['backupid'],version=4)
+                    except ValueError:
+                        messages.error(request,"Please Select a Valid Submission")
+                        return redirect(reverse("backup"))
+                   
+                    if request.POST["netid"] == "All":
+                        previewswitch = switch.objects.filter(submissionID = previewID)
+                        previewvlan = vlan.objects.filter(submissionID = previewID)
+                        previewmxports = mxport.objects.filter(submissionID = previewID)
+                    elif request.POST["netid"] in net_name:
+                        previewnet = request.POST["netid"]
+                        previewswitch = switch.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                        previewvlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                        previewmxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                    else:
+                        messages.error(request,"No matching networks found")
+                        return redirect(reverse("backup"))
+                    return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'switch':previewswitch,'vlans':previewvlan,'mxports':previewmxports,'nets':nets})
                 
-            
-                if request.POST["netid"] == "All":
-                    restoreswitch = switch.objects.filter(submissionID = previewID)
-                    restorevlan = vlan.objects.filter(submissionID = previewID)
-                    restoremxports = mxport.objects.filter(submissionID = previewID)
-                elif request.POST["netid"] in netlist:
-                    restoreswitch = switch.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
-                    restorevlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
-                    restoremxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
-                else:
-                    messages.error(request,"No matching networks found, please select all at minimum")
-                    return redirect(reverse("backup"))
-                net_id=[]
-                net_name=[]
-                my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
-                for net in my_nets:
-                    net_id.append(net["id"])
-                    net_name.append(net["name"])
-                restorenetworks = dict(zip(net_name,net_id))
-                for serial in restoreswitch:
-                    #restorenetID = restorenetworks(serial.netname)
-                    dashboard.switch_ports.updateDeviceSwitchPort(serial.serial, serial.number, 
-                        name = serial.portname, 
-                        enabled = serial.enabled, 
-                        type = serial.porttype, 
-                        vlan = serial.vlan, 
-                        voicevlan = serial.voicevlan, 
-                        rstpEnabled = serial.rstp, 
-                        stpGuard = serial.stp, 
-                        poeEnabled = serial.poe
-                        )
-            
-                distinctvlans = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"])).distinct('netname')
-                for i in distinctvlans:
-                    restorenetID = restorenetworks[i.netname]
-                    if dashboard.vlans.getNetworkVlansEnabledState(restorenetID)['enabled'] == False: 
-                        print(dashboard.vlans.updateNetworkVlansEnabledState(restorenetID, True))
-                        
-                    orgvlans = dashboard.vlans.getNetworkVlans(restorenetID)
-                    currentVlanList = []
-                    for ovlan in orgvlans: currentVlanList.append(str(ovlan['id']))
-                    print(currentVlanList)
-                    restorevlans = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = i.netname))
-                    for j in restorevlans:
-                        if j.vlan in currentVlanList:
-                            if j.dhcpstatus == 'Relay DHCP to another server':
-                                dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
-                                name = j.vlanname,
-                                subnet = j.subnet,
-                                applianceIp = j.mxip,
-                                dhcpHandling = j.dhcpstatus,
-                                dhcpRelayServerIPs = j.dhcprelayservers,   #need to filter this out if handling isn't relay                                      
-                                )
-                            else:
-                                dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
-                                name = j.vlanname,
-                                subnet = j.subnet,
-                                applianceIp = j.mxip,
-                                dhcpHandling = j.dhcpstatus
-                                )
-                        else: 
-                            if j.dhcpstatus == 'Relay DHCP to another server':
-                                
-                                dashboard.vlans.createNetworkVlan(restorenetID, j.vlan,
-                                name = j.vlanname,
-                                subnet = j.subnet,
-                                applianceIp = j.mxip,
-                                )
-                                dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
-                                dhcpHandling = j.dhcpstatus,
-                                dhcpRelayServerIPs = j.dhcprelayservers,
-                                )
-                            else: 
-                                print(j.vlan)
-                                
-                                dashboard.vlans.createNetworkVlan(restorenetID, j.vlan,
-                                name = j.vlanname,
-                                subnet = j.subnet,
-                                applianceIp = j.mxip,
-                                )
-                                dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
-                                dhcpHandling = j.dhcpstatus,                                
-                                )
-                    for network in restoremxports:
-                        restorenetID = restorenetworks[network.netname]
-                        if network.porttype =='trunk':
-                            dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
-                                enabled = network.enabled,
-                                type = network.porttype,
-                                vlan = network.vlan,
-                                dropUntaggedTraffic = network.dropuntag,
-                                allowedVlans = network.allowedvlans,
-                                )
-                        else: 
-                            dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
-                                enabled = network.enabled,
-                                type = network.porttype,
-                                vlan = network.vlan,
-                                dropUntaggedTraffic = network.dropuntag,
-                                accessPolicy = 'open',
-                                )
-                messages.success(request,"Restore Complete")
-                return redirect(reverse("backup"))
+                if ('restore' in request.POST):
+                    try:
+                        previewID=uuid.UUID(request.POST['backupid'],version=4)
+                    except ValueError:
+                        messages.error(request,"Please Select a valid backup")
+                        return redirect(reverse("backup"))
+                    try:
+                        orgoID = request.POST['orgoid']
+                        netlist=[]
+                        for i in dashboard.networks.getOrganizationNetworks(orgoID):
+                            netlist.append(i["name"])
+                    except:
+                        messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
+                        return redirect(reverse("backup"))
+                    
+                
+                    if request.POST["netid"] == "All":
+                        restoreswitch = switch.objects.filter(submissionID = previewID)
+                        restorevlan = vlan.objects.filter(submissionID = previewID)
+                        restoremxports = mxport.objects.filter(submissionID = previewID)
+                    elif request.POST["netid"] in netlist:
+                        restoreswitch = switch.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                        restorevlan = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                        restoremxports = mxport.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"]))
+                    else:
+                        messages.error(request,"No matching networks found, please select all at minimum")
+                        return redirect(reverse("backup"))
+                    net_id=[]
+                    net_name=[]
+                    my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
+                    for net in my_nets:
+                        net_id.append(net["id"])
+                        net_name.append(net["name"])
+                    restorenetworks = dict(zip(net_name,net_id))
+                    for serial in restoreswitch:
+                        #restorenetID = restorenetworks(serial.netname)
+                        dashboard.switch_ports.updateDeviceSwitchPort(serial.serial, serial.number, 
+                            name = serial.portname, 
+                            enabled = serial.enabled, 
+                            type = serial.porttype, 
+                            vlan = serial.vlan, 
+                            voicevlan = serial.voicevlan, 
+                            rstpEnabled = serial.rstp, 
+                            stpGuard = serial.stp, 
+                            poeEnabled = serial.poe
+                            )
+                
+                    distinctvlans = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"])).distinct('netname')
+                    for i in distinctvlans:
+                        restorenetID = restorenetworks[i.netname]
+                        if dashboard.vlans.getNetworkVlansEnabledState(restorenetID)['enabled'] == False: 
+                            print(dashboard.vlans.updateNetworkVlansEnabledState(restorenetID, True))
                             
-      
-                        
-        return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'nets':nets})
+                        orgvlans = dashboard.vlans.getNetworkVlans(restorenetID)
+                        currentVlanList = []
+                        for ovlan in orgvlans: currentVlanList.append(str(ovlan['id']))
+                        print(currentVlanList)
+                        restorevlans = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = i.netname))
+                        for j in restorevlans:
+                            if j.vlan in currentVlanList:
+                                if j.dhcpstatus == 'Relay DHCP to another server':
+                                    dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
+                                    name = j.vlanname,
+                                    subnet = j.subnet,
+                                    applianceIp = j.mxip,
+                                    dhcpHandling = j.dhcpstatus,
+                                    dhcpRelayServerIPs = j.dhcprelayservers,   #need to filter this out if handling isn't relay                                      
+                                    )
+                                else:
+                                    dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
+                                    name = j.vlanname,
+                                    subnet = j.subnet,
+                                    applianceIp = j.mxip,
+                                    dhcpHandling = j.dhcpstatus
+                                    )
+                            else: 
+                                if j.dhcpstatus == 'Relay DHCP to another server':
+                                    
+                                    dashboard.vlans.createNetworkVlan(restorenetID, j.vlan,
+                                    name = j.vlanname,
+                                    subnet = j.subnet,
+                                    applianceIp = j.mxip,
+                                    )
+                                    dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
+                                    dhcpHandling = j.dhcpstatus,
+                                    dhcpRelayServerIPs = j.dhcprelayservers,
+                                    )
+                                else: 
+                                    print(j.vlan)
+                                    
+                                    dashboard.vlans.createNetworkVlan(restorenetID, j.vlan,
+                                    name = j.vlanname,
+                                    subnet = j.subnet,
+                                    applianceIp = j.mxip,
+                                    )
+                                    dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
+                                    dhcpHandling = j.dhcpstatus,                                
+                                    )
+                        for network in restoremxports:
+                            restorenetID = restorenetworks[network.netname]
+                            if network.porttype =='trunk':
+                                dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
+                                    enabled = network.enabled,
+                                    type = network.porttype,
+                                    vlan = network.vlan,
+                                    dropUntaggedTraffic = network.dropuntag,
+                                    allowedVlans = network.allowedvlans,
+                                    )
+                            else: 
+                                dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
+                                    enabled = network.enabled,
+                                    type = network.porttype,
+                                    vlan = network.vlan,
+                                    dropUntaggedTraffic = network.dropuntag,
+                                    accessPolicy = 'open',
+                                    )
+                    messages.success(request,"Restore Complete")
+                    return redirect(reverse("backup"))
+                                
+          
+                            
+            return render(request, 'backup.html', {'orgs':orgs, 'backups':substable,'nets':nets})
+        except:
+            messages.error(request,"Something went wrong (Likely a meraki bad gateway) Please try again")
+            return redirect("backup")
+            
     else:
         return redirect('/')
  
 def profile(request):
     if request.user.is_authenticated:
         try:
-            key = userprofile.objects.get(owner=request.user.id).apikey
-            message = "You may change your API Key Below"
-        except:
-            key = ''
-            
-            message = "Please Enter your API into the box"
-        filter = subtable.objects.filter(owner=request.user.id)  
-        substable = SubRefresh(request,filter)
-      
-            
-        if 'key' in request.POST and not request.POST['key']=='':
             try:
-                newkey = request.POST['key']
-                dashboard = meraki.DashboardAPI(
-                api_key = newkey,
-                base_url='https://api-mp.meraki.com/api/v0/',
-                log_file_prefix=os.path.basename(__file__)[:-3],
-                print_console=False
-                )
-                dashboard.organizations.getOrganizations()
+                key = userprofile.objects.get(owner=request.user.id).apikey
+                message = "You may change your API Key Below"
             except:
-                message = "Api Key is invalid please try again"
-                return render(request, 'profile.html',{'message':message})
-            userprofile.objects.get_or_create(owner=request.user) 
-            userprofile.objects.filter(owner=request.user).update(apikey = newkey) 
-            key = userprofile.objects.get(owner=request.user.id).apikey
-            messages.success(request,"Key has been update successfuly")
+                key = ''
+                
+                message = "Please Enter your API into the box"
+            filter = subtable.objects.filter(owner=request.user.id)  
+            substable = SubRefresh(request,filter)
+          
+                
+            if 'key' in request.POST and not request.POST['key']=='':
+                try:
+                    newkey = request.POST['key']
+                    dashboard = meraki.DashboardAPI(
+                    api_key = newkey,
+                    base_url='https://api-mp.meraki.com/api/v0/',
+                    log_file_prefix=os.path.basename(__file__)[:-3],
+                    print_console=False
+                    )
+                    dashboard.organizations.getOrganizations()
+                except:
+                    message = "Api Key is invalid please try again"
+                    return render(request, 'profile.html',{'message':message})
+                userprofile.objects.get_or_create(owner=request.user) 
+                userprofile.objects.filter(owner=request.user).update(apikey = newkey) 
+                key = userprofile.objects.get(owner=request.user.id).apikey
+                messages.success(request,"Key has been update successfuly")
+                return redirect("profile")
+            elif 'key' in request.POST:
+                messages.error(request,"Key length cannot be blank")
+                return redirect("profile")
+          
+           
+            if 'Delete' in request.POST:            
+                try:
+                    DelID=uuid.UUID(request.POST['subid'],version=4)
+                    subtable.objects.get(id = DelID).delete()
+                    messages.success(request,"Success")
+                    filter = subtable.objects.filter(owner=request.user.id)  
+                    substable = SubRefresh(request,filter)
+                    return redirect(reverse("profile"))
+                except ValueError:
+                    messages.error(request,"Please Select A valid submission")
+                    return redirect("profile")   
+            return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})
+        except:
+            messages.error(request,"Something went wrong (Likely a meraki bad gateway) Please try again")
             return redirect("profile")
-        elif 'key' in request.POST:
-            messages.error(request,"Key length cannot be blank")
-            return redirect("profile")
-      
-       
-        if 'Delete' in request.POST:            
-            try:
-                DelID=uuid.UUID(request.POST['subid'],version=4)
-                subtable.objects.get(id = DelID).delete()
-                messages.success(request,"Success")
-                filter = subtable.objects.filter(owner=request.user.id)  
-                substable = SubRefresh(request,filter)
-                return redirect(reverse("profile"))
-            except ValueError:
-                messages.error(request,"Please Select A valid submission")
-                return redirect("profile")   
-        return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})
     else:
         return redirect('/')
     
