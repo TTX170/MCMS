@@ -1,2 +1,3 @@
 Serial,Network name,Name,Tags,Notes,Address,Static IP,Gateway,Netmask,DNS1,DNS2,VLAN,Network tags
-Q2HP-FSBP-AWZR,BeepBeep,Beep,Beep,Beep,26 Ousemere Close NG340HY,,192.168.1.1,255.255.255.0,1.1.1.1,8.8.8.8,68,Yes
+Q2HP-FSBP-AWZR,BeepBeep,Beep,Beep,Beep,26 Ousemere Close NG340HY,192.168.1.4,192.168.1.1,255.255.255.0,1.1.1.1,8.8.8.8,68,Yes
+Q2HP-Fsdplomjp;lomnjP-AWZR,BeepBeep,Beep,Beep,Beep,26 Ousemere Close NG340HY,192.168.1.4,192.168.1.1,255.255.255.0,1.1.1.1,8.8.8.8,68,Yes

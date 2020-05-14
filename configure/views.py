@@ -9,7 +9,7 @@ from django.utils import timezone
 # Create your views here.
 
 from django.http import HttpResponse
-#from django.shortcuts import redirect
+
 
 def apicheck(request):
     if request.user.is_superuser:
@@ -103,15 +103,8 @@ def bulkchange(request):
         table=[]      
         invalidreq=[]
         netcorrect = []
-        filter = subtable.objects.filter(Q(owner = request.user.id) & Q(subtype = "addDev") | Q(subtype = "backupDev"))
-        # bulk_id=[]
-        # bulk_name=[]
-        # for i in subs:
-            # bulk_id.append(i.id)
-            # if i.subtype == "addDev":
-                # bulk_name.append("%s-Import-%s"%(i.submissionFname,i.date))
-            # else:
-                # bulk_name.append("%s-Backup-%s"%(i.submissionFname,i.date))
+        filter = subtable.objects.filter(Q(owner = request.user.id) & (Q(subtype = "addDev") | Q(subtype = "backupDev")))
+
         substable = SubRefresh(request,filter)
         
         if not apikey == '':
@@ -128,12 +121,7 @@ def bulkchange(request):
                 org_id.append(org["id"])
                 org_name.append(org["name"])
             orgs = dict(zip(org_name,org_id))                  
-            #return render(request, 'bulkchange.html',{'table':table,'bulk_name':bulk_name})
-        #data = bulk.objects.all()
-        #prompt = {
-         #   'order': 'The Serial and Network name fields are required. The following fields are supported: Name, Tags, Notes, Address, Static IP, Netmask, Gateway, DNS1, DNS2, VLAN, Network tags.Please note your submission id is auto generated from the csv name',
-          #  'profiles': data
-           # }
+       
                        
         if 'csvfile' in request.FILES:
             csv_file = request.FILES['csvfile']
@@ -171,15 +159,11 @@ def bulkchange(request):
                     submissionID = (subtable.objects.get(id=subid)),
                 ) 
                    
-            #context = {}
+           
             messages.success(request,"Import Successful")
             return redirect("bulkchange") 
         if ('preview' in request.POST) or ('validate' in request.POST) or ('genrevert' in request.POST):
-            # try:
-                # orgID = request.GET['orgid']
-            # except:
-                # Error = "Please select a valid Org"
-                # return render(request, 'bulkchange.html', {'bulk_name':substable,'orgs':orgs,'error':Error}, prompt)
+
                 
             try:
                 submissionID=uuid.UUID(request.POST['sendid'],version=4)
@@ -193,7 +177,6 @@ def bulkchange(request):
                 else:
                     operationtype = "all"
                     
-            #changes = bulk.objects.filter(submissionID = submissionID)
             try:
                 orgID = request.POST['orgid']
             except:
@@ -220,7 +203,7 @@ def bulkchange(request):
                 invalidreq=[]
                 netcorrect = []
                 networkactions = []
-                if 'Preview' in request.POST:
+                if ('Preview' in request.POST) or ('validate' in request.POST):
                     net_name = []
                     net_id = []
                     new_net_id=[]
@@ -271,10 +254,12 @@ def bulkchange(request):
                         devmask = i.mask
                         devdns = [i.dns1, i.dns2]
                         devvlan = i.vlan
+                        print(i.serial)
                         
                         
                         if not i.serial in orgdevserials:
                            messages.error(request,"%s is not known in this organisation" % devserial)
+                           
                            continue
                             
                         NetID = net_name.index(i.networkname)
@@ -304,11 +289,15 @@ def bulkchange(request):
                             
                         dashboard.management_interface_settings.updateNetworkDeviceManagementInterfaceSettings(destID, devserial,wan1 = wan1)
                         dashboard.devices.updateNetworkDevice(destID, devserial, name = devname, tags = devtags, notes = devnotes)
-                        messages.success(request,"Change Complete")
-                        return redirect("bulkchange")
+                    messages.success(request,"Change Complete")
+                    return redirect("bulkchange")
                 if 'genrevert' in request.POST:
                     revertID = request.POST["revertname"]
-                    orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
+                    try:
+                        orgdevices=dashboard.organizations.getOrganizationInventory(orgID)
+                    except:
+                        messages.error(request,"Please Select a valid organisation")
+                        return redirect("bulkchange")
                     for device in orgdevices:
                         orgdevserials.append(device["serial"])
                         orgdevnetwork.append(device["networkId"])
@@ -323,13 +312,21 @@ def bulkchange(request):
                         date = timezone.now()
                     )
                     if operationtype == "all":
-                        changes = net_serial
+                        
+                        changes = []
+                        changes = orgdevserials
+                        
                     for i in changes :
                         if operationtype =="all":
                             devserial = i
+                            
                         else:
                             devserial = i.serial
-                        currentnetworkID = net_serial[devserial]
+                        try:
+                            currentnetworkID = net_serial[devserial]
+                        except:
+                            messages.error(request, "%s is not a valid serial number in this organisation" %devserial)
+                            continue
                         revertmanagement = (dashboard.management_interface_settings.getNetworkDeviceManagementInterfaceSettings(currentnetworkID, devserial)["wan1"])
                         revertproperties = dashboard.devices.getNetworkDevice(currentnetworkID, devserial)
                         networksets = dashboard.networks.getNetwork(currentnetworkID)
@@ -337,7 +334,7 @@ def bulkchange(request):
                         else :revname = None
                         if "tags" in revertproperties : revtags = revertproperties["tags"] 
                         else :revtags = None
-                        if "notes" in revertproperties : revname = revertproperties["notes"] 
+                        if "notes" in revertproperties : revnotes = revertproperties["notes"] 
                         else :revnotes = None
                         if "address" in revertproperties : revaddr = revertproperties["address"] 
                         else :revaddr = None
@@ -373,8 +370,8 @@ def bulkchange(request):
                             nettags = revnettags,
                             submissionID = (subtable.objects.get(id=subid))  
                         )
-                        messages.success(request,"Backup Created")
-                        return redirect("bulkchange")
+                    messages.success(request,"Backup Created")
+                    return redirect("bulkchange")
                         #https://pypi.org/project/django-encrypted-model-fields/
                         
             return render(request, 'bulkchange.html', {'pull':changes,'bulk_name':substable,'orgs':orgs})
@@ -409,11 +406,11 @@ def backup(request):
                 org_id.append(org["id"])
                 org_name.append(org["name"])
             orgs = dict(zip(org_name,org_id))
-            #orgoID = request.GET['orgoid'] 
+            
             if ('refresh' in request.POST):
                 orgoID = request.POST['orgoid']
                 if not orgoID in org_id: 
-                    messages.error(request,"Error: Refresh requires and org to be selected")
+                    messages.error(request,"Refresh requires an org to be selected")
                     return redirect(reverse("backup"))
                 my_nets = dashboard.networks.getOrganizationNetworks(orgoID)
                 net_id = []
@@ -435,7 +432,11 @@ def backup(request):
                     date = timezone.now()
                 )
                 #get the nets and the api calls to get the info we need
-                org_nets = dashboard.networks.getOrganizationNetworks(orgoID)               
+                try:
+                    org_nets = dashboard.networks.getOrganizationNetworks(orgoID)
+                except:
+                    messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
+                    return redirect("backup")
                 net_id = []
                 net_name = []
                 for net in org_nets:
@@ -492,7 +493,7 @@ def backup(request):
                             if 'vlan' in ports: mxvlan = ports['vlan']
                             else: mxvlan = None
                             if ports['type'] == 'access':
-                                avlans = 'N/A'
+                                avlan = 'N/A'
                             else:
                                 avlan = ports['allowedVlans'] 
                             mxport.objects.update_or_create(
@@ -505,8 +506,10 @@ def backup(request):
                                 vlan = mxvlan,
                                 allowedvlans = avlan,
                             )
-                    except:
-                         messages.error(request,"Unable to backup %s, No valid Mxports" %i)
+                    except Exception as e:
+                         messages.error(request,"Unable to backup %s, No valid Mxports"%i)
+                         print(e)
+                         
                 messages.success(request,"Backup Complete")         
                 return redirect(reverse('backup'))   
                             
@@ -521,7 +524,7 @@ def backup(request):
                         net_name.append(net["name"])
                     nets = dict(zip(net_name,net_id)) 
                 except:
-                    messages.error(request,"Please Select a Valid Organisation")
+                    messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
                     return redirect(reverse("backup"))
                 try:
                     previewID=uuid.UUID(request.POST['backupid'],version=4)
@@ -552,13 +555,13 @@ def backup(request):
                 try:
                     orgoID = request.POST['orgoid']
                     netlist=[]
-                   
+                    for i in dashboard.networks.getOrganizationNetworks(orgoID):
+                        netlist.append(i["name"])
                 except:
-                    messages.error(request,"Please Select a Valid Organisation")
+                    messages.error(request,"Organisation is not found or you do not have have the required permissions (full organisation Read/Write is required)")
                     return redirect(reverse("backup"))
                 
-                for i in dashboard.networks.getOrganizationNetworks(orgoID):
-                    netlist.append(i["name"])
+            
                 if request.POST["netid"] == "All":
                     restoreswitch = switch.objects.filter(submissionID = previewID)
                     restorevlan = vlan.objects.filter(submissionID = previewID)
@@ -589,38 +592,25 @@ def backup(request):
                         stpGuard = serial.stp, 
                         poeEnabled = serial.poe
                         )
-                for network in restoremxports:
-                    restorenetID = restorenetworks[network.netname]
-                    if network.porttype =='trunk':
-                        dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
-                            enabled = network.enabled,
-                            type = network.porttype,
-                            vlan = network.vlan,
-                            dropUntaggedTraffic = network.dropuntag,
-                            allowedVlans = network.allowedvlans,
-                            )
-                    else: 
-                        dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
-                            enabled = network.enabled,
-                            type = network.porttype,
-                            vlan = network.vlan,
-                            dropUntaggedTraffic = network.dropuntag,
-                            )
+            
                 distinctvlans = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = request.POST["netid"])).distinct('netname')
                 for i in distinctvlans:
                     restorenetID = restorenetworks[i.netname]
-                    if not dashboard.vlans.getNetworkVlansEnabledState(restorenetID): dashboard.vlans.updateVlansEnabledState(restorenetID, True)                    
+                    if dashboard.vlans.getNetworkVlansEnabledState(restorenetID)['enabled'] == False: 
+                        print(dashboard.vlans.updateNetworkVlansEnabledState(restorenetID, True))
+                        
                     orgvlans = dashboard.vlans.getNetworkVlans(restorenetID)
                     currentVlanList = []
-                    for j in orgvlans: currentVlanList.append(orgvlans['id'])
+                    for ovlan in orgvlans: currentVlanList.append(str(ovlan['id']))
+                    print(currentVlanList)
                     restorevlans = vlan.objects.filter(Q(submissionID = previewID) & Q(netname = i.netname))
-                    for j in restorevlans:                            
-                        if j in currerentVlanLst:
+                    for j in restorevlans:
+                        if j.vlan in currentVlanList:
                             if j.dhcpstatus == 'Relay DHCP to another server':
                                 dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
                                 name = j.vlanname,
                                 subnet = j.subnet,
-                                mxip = j.mxip,
+                                applianceIp = j.mxip,
                                 dhcpHandling = j.dhcpstatus,
                                 dhcpRelayServerIPs = j.dhcprelayservers,   #need to filter this out if handling isn't relay                                      
                                 )
@@ -628,28 +618,49 @@ def backup(request):
                                 dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
                                 name = j.vlanname,
                                 subnet = j.subnet,
-                                mxip = j.mxip,
+                                applianceIp = j.mxip,
                                 dhcpHandling = j.dhcpstatus
                                 )
                         else: 
                             if j.dhcpstatus == 'Relay DHCP to another server':
-                                dashboard.createNetworkVlan(restorenetID, j.vlan,
-                                j.vlanname,
-                                j.subnet,
-                                j.mxip,
+                                
+                                dashboard.vlans.createNetworkVlan(restorenetID, j.vlan,
+                                name = j.vlanname,
+                                subnet = j.subnet,
+                                applianceIp = j.mxip,
                                 )
-                                dashboard.updateNetworkVlan(restorenetID, j.vlan,
+                                dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
                                 dhcpHandling = j.dhcpstatus,
                                 dhcpRelayServerIPs = j.dhcprelayservers,
                                 )
                             else: 
-                                dashboard.createNetworkVlan(restorenetID, j.vlan,
-                                j.vlanname,
-                                j.subnet,
-                                j.mxip,
+                                print(j.vlan)
+                                
+                                dashboard.vlans.createNetworkVlan(restorenetID, j.vlan,
+                                name = j.vlanname,
+                                subnet = j.subnet,
+                                applianceIp = j.mxip,
                                 )
-                                dashboard.updateNetworkVlan(restorenetID, j.vlan,
+                                dashboard.vlans.updateNetworkVlan(restorenetID, j.vlan,
                                 dhcpHandling = j.dhcpstatus,                                
+                                )
+                    for network in restoremxports:
+                        restorenetID = restorenetworks[network.netname]
+                        if network.porttype =='trunk':
+                            dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
+                                enabled = network.enabled,
+                                type = network.porttype,
+                                vlan = network.vlan,
+                                dropUntaggedTraffic = network.dropuntag,
+                                allowedVlans = network.allowedvlans,
+                                )
+                        else: 
+                            dashboard.mx_vlan_ports.updateNetworkAppliancePort(restorenetID, network.number,
+                                enabled = network.enabled,
+                                type = network.porttype,
+                                vlan = network.vlan,
+                                dropUntaggedTraffic = network.dropuntag,
+                                accessPolicy = 'open',
                                 )
                 messages.success(request,"Restore Complete")
                 return redirect(reverse("backup"))
@@ -687,14 +698,14 @@ def profile(request):
                 message = "Api Key is invalid please try again"
                 return render(request, 'profile.html',{'message':message})
             userprofile.objects.get_or_create(owner=request.user) 
-            userprofile.objects.update(apikey = newkey)
+            userprofile.objects.filter(owner=request.user).update(apikey = newkey) 
             key = userprofile.objects.get(owner=request.user.id).apikey
             messages.success(request,"Key has been update successfuly")
             return redirect("profile")
         elif 'key' in request.POST:
             messages.error(request,"Key length cannot be blank")
             return redirect("profile")
-        #return render(request, 'profile.html',{'message':message, 'currentkey':key,'sub':substable})
+      
        
         if 'Delete' in request.POST:            
             try:
